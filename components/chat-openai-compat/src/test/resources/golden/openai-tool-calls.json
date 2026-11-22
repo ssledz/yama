@@ -1,0 +1,35 @@
+{
+  "id": "resp_0a1b2c",
+  "object": "response",
+  "created_at": 1763851200,
+  "status": "completed",
+  "error": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "fc_01",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"url\":\"https://artofscala.com\",\"outputPath\":\"sandbox/downloads/aos.html\"}",
+      "call_id": "call_wget_1",
+      "name": "wget"
+    },
+    {
+      "id": "fc_02",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{\"path\":\"sandbox/\"}",
+      "call_id": "call_read_1",
+      "name": "fs_read"
+    }
+  ],
+  "parallel_tool_calls": true,
+  "store": false,
+  "usage": {
+    "input_tokens": 1520,
+    "input_tokens_details": { "cached_tokens": 1024 },
+    "output_tokens": 61,
+    "output_tokens_details": { "reasoning_tokens": 0 },
+    "total_tokens": 1581
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "gen-1763851200-abc",
+  "object": "response",
+  "status": "completed",
+  "model": "deepseek/deepseek-chat",
+  "output": [
+    { "type": "reasoning", "id": "rs_1", "summary": [] },
+    { "type": "message", "role": "assistant", "content": [ { "type": "output_text", "text": "Let me check the folder." } ] },
+    { "type": "function_call", "id": "fc_1", "call_id": "call_9", "name": "fs_read", "arguments": "{\"path\":\"sandbox/\"}" }
+  ],
+  "usage": { "input_tokens": 900, "output_tokens": 30 }
+}

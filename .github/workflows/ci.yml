@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
+
+      # files-mcp is needed by the McpClientSpec integration test
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: mcp/files-mcp/package-lock.json
+
+      - name: Install files-mcp
+        run: npm ci --prefix mcp/files-mcp
+
+      - name: Brick boundaries
+        run: ./scripts/check-bricks.sh
+
+      - name: Test
+        run: sbt test
+
+      # SkillsSpec already checks the bundled skill; this runs the spec's reference validator as well.
+      - name: Validate bundled skills (skills-ref)
+        continue-on-error: true
+        run: |
+          pip install "git+https://github.com/agentskills/agentskills#subdirectory=skills-ref"
+          skills-ref validate skills/markdown-summary

@@ -1,0 +1,28 @@
+{
+  "model": "gpt-4.1",
+  "instructions": "be helpful",
+  "input": [
+    { "type": "message", "role": "user", "content": "download https://example.com" },
+    { "type": "function_call", "call_id": "call_1", "name": "wget", "arguments": "{\"url\":\"https://example.com\",\"outputPath\":\"sandbox/downloads/e.html\"}" },
+    { "type": "function_call_output", "call_id": "call_1", "output": "{\"success\":true,\"bytes\":1256}" },
+    { "type": "message", "role": "assistant", "content": "Saved it." }
+  ],
+  "store": false,
+  "tools": [
+    {
+      "type": "function",
+      "name": "wget",
+      "description": "Download a URL.",
+      "parameters": { "type": "object", "properties": { "url": { "type": "string" } }, "required": ["url"], "additionalProperties": false },
+      "strict": true
+    },
+    {
+      "type": "function",
+      "name": "fs_read",
+      "description": "Read a file.",
+      "parameters": { "type": "object", "properties": { "path": { "type": "string" } } },
+      "strict": false
+    }
+  ],
+  "tool_choice": "auto"
+}

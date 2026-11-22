@@ -1,0 +1,19 @@
+{
+  "id": "resp_0a1b2d",
+  "object": "response",
+  "status": "completed",
+  "error": null,
+  "model": "gpt-4.1-2025-04-14",
+  "output": [
+    {
+      "id": "msg_01",
+      "type": "message",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        { "type": "output_text", "annotations": [], "text": "I saved a summary to sandbox/aos.md." }
+      ]
+    }
+  ],
+  "usage": { "input_tokens": 2100, "output_tokens": 14, "total_tokens": 2114 }
+}

@@ -1,0 +1,21 @@
+<configuration>
+  <!-- On-stage readability: time, one-letter coloured level, the message (which carries its own colours). -->
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <withJansi>false</withJansi>
+    <encoder>
+      <pattern>%gray(%d{HH:mm:ss}) %highlight(%.-1level) %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- The local MCP server's stderr, prefixed with its name. -->
+  <logger name="yama.mcp" level="INFO"/>
+
+  <!-- Library noise stays out of the talk. -->
+  <logger name="io.modelcontextprotocol" level="WARN"/>
+  <logger name="reactor" level="WARN"/>
+  <logger name="org.http4s" level="WARN"/>
+
+  <root level="INFO">
+    <appender-ref ref="CONSOLE"/>
+  </root>
+</configuration>
