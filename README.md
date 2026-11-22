@@ -179,5 +179,5 @@ mcp/files-mcp` first).
 
 ## Credits
 
-`mcp/files-mcp` is a sandboxed filesystem MCP server written in TypeScript, vendored from the JavaScript
-version of yama (MIT, see its `package.json`).
+`mcp/files-mcp` is a sandboxed filesystem MCP server written in TypeScript by
+[overment](https://x.com/_overment) (MIT, see its `package.json`).
