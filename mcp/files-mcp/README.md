@@ -3,6 +3,7 @@
 Stdio MCP server for sandboxed file access — read files, search content, safely edit with checksums, and manage file
 structure.
 
+Author: [overment](https://x.com/_overment)
 
 > [!WARNING]
 > This server provides filesystem access to an AI agent. While it's sandboxed to specific directories, always:
