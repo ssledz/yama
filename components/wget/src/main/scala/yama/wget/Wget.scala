@@ -19,8 +19,15 @@ final case class WgetArgs(url: String, outputPath: String) derives ToolSchema, D
 
 /** Native tool: download a URL into the sandbox. "Native" = runs in this process instead of behind MCP. */
 object Wget:
-  def make[F[_]: Async: Files: Logger](client: Client[F], sandboxDir: Path): Tool[F] =
-    val sandbox = Sandbox(sandboxDir)
+  /** The names the model addresses `roots` by, e.g. `List(/a/yama, /b/x)` → `List(yama, x)`. Same rule as files-mcp,
+    * so pass the roots in the same order as its `FS_ROOTS`.
+    */
+  def mountNames(roots: List[Path]): List[String] = Sandbox.mountNames(roots)
+
+  /** `roots`: the directories it may write to. A path without a mount prefix lands in the first one. */
+  def make[F[_]: Async: Files: Logger](client: Client[F], roots: List[Path]): Tool[F] =
+    val sandbox = Sandbox.of(roots)
+    val inside  = sandbox.names.map(n => s"'$n/'").mkString(" or ")
     val http    = FollowRedirect(maxRedirects = 5)(client)
     Tool[F](
       name = "wget",
@@ -28,7 +35,7 @@ object Wget:
         "Works for any file type: html, markdown, json, images, pdf.",
       schema = ToolSchema[WgetArgs].describe(
         "url"        -> "URL to download, e.g. 'https://example.com/report.pdf'",
-        "outputPath" -> s"Where to save it, e.g. '${sandbox.mount}/downloads/report.pdf'. Must stay inside '${sandbox.mount}/'."
+        "outputPath" -> s"Where to save it, e.g. '${sandbox.names.head}/downloads/report.pdf'. Must stay inside $inside."
       ),
       strict = true
     ) { json =>

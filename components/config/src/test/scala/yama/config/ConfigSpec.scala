@@ -15,7 +15,12 @@ class ConfigSpec extends CatsEffectSuite:
       assert(config.providers.keySet.contains(config.chat.provider))
       assertEquals(config.mcpServers.keySet, Set("files", "tavily"))
       assertEquals(config.subagents("research_agent").tools, List("tavily_search", "tavily_extract"))
+      assertEquals(config.sandbox.dir, None, "no sandbox in the file: the directory yama runs in")
     }
+  }
+
+  test("--sandbox overrides the default") {
+    Config.load[IO](repoConfig, Overrides(sandbox = Some("/tmp/work"))).map(c => assertEquals(c.sandbox.dir, Some("/tmp/work")))
   }
 
   test("CLI flags override the file") {
@@ -62,7 +67,7 @@ class ConfigSpec extends CatsEffectSuite:
       """{ "chat": { "provider": "local", "model": "m" },
            "providers": { "local": { "baseUrl": "http://localhost:11434/v1", "apiKeyEnv": "YAMA_TEST_UNSET_KEY", "apiKeyOptional": true },
                           "remote": { "baseUrl": "https://x", "apiKeyEnv": "YAMA_TEST_UNSET_KEY" } },
-           "agent": { "instructions": "hi" }, "sandbox": {} }"""
+           "agent": { "instructions": "hi" } }"""
     )
     for
       local  <- Config.load[IO](file, Overrides()).flatMap(Secrets.load[IO])
@@ -71,3 +76,18 @@ class ConfigSpec extends CatsEffectSuite:
       assertEquals(local.chatApiKey.value, "unused")
       assert(remote.isLeft)
   }
+
+  test("bootstrap writes the bundled default config once, and it loads") {
+    val file = Files.createTempDirectory("yama-home").resolve("nested/config.json")
+    for
+      first  <- Config.bootstrap[IO](file)
+      _      <- IO(Files.writeString(file, Files.readString(file) + " "))
+      second <- Config.bootstrap[IO](file)
+      config <- Config.load[IO](file, Overrides())
+    yield
+      assert(first, "written on first run")
+      assert(!second, "an existing file is left alone")
+      assert(Files.readString(file).endsWith(" "), "not overwritten")
+      assertEquals(config.mcpServers.keySet, Set("files", "tavily"))
+  }
+

@@ -42,11 +42,6 @@ node_modules/
 mcp/**/dist/
 npm-debug.log*
 
-# --- Runtime data -------------------------------------------------------------
-# Agent sandbox: everything the agent writes stays local.
-sandbox/*
-!sandbox/.gitkeep
-
 # --- OS -----------------------------------------------------------------------
 .DS_Store
 Thumbs.db

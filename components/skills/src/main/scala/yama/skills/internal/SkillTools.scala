@@ -4,7 +4,7 @@ import cats.effect.{Ref, Sync}
 import cats.syntax.all.*
 import io.circe.{Decoder, Json}
 import io.circe.syntax.*
-import yama.skills.{Diagnostic, SkillMeta, Skills}
+import yama.skills.{Diagnostic, Scope, SkillMeta, Skills}
 import yama.tool.Tool
 
 import java.nio.file.Files
@@ -62,10 +62,14 @@ private[skills] object SkillTools:
     val files =
       if resources.isEmpty then ""
       else resources.map(r => s"<file>${xml(r)}</file>").mkString("\n<skill_resources>\n", "\n", "\n</skill_resources>")
+    // a built-in skill lives inside yama's jar: no path the model could use, only read_skill_resource
+    val where =
+      if skill.meta.scope == Scope.Builtin then "built into yama (read its files with read_skill_resource)"
+      else skill.meta.directory.toString
     s"""<skill_content name="${xml(skill.meta.name)}">
        |${skill.body}
        |
-       |Skill directory: ${skill.meta.directory}
+       |Skill directory: $where
        |Relative paths in this skill are relative to the skill directory.$files
        |</skill_content>""".stripMargin
 

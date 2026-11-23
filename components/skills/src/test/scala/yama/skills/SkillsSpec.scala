@@ -119,3 +119,18 @@ class SkillsSpec extends CatsEffectSuite:
       assertEquals(skills.diagnostics, Nil)
     }
   }
+
+  test("built-in skills come from the classpath, below user-level ones") {
+    for
+      builtin <- Skills.builtinRoot[IO]
+      user     = Files.createTempDirectory("yama-user")
+      _        = write(user, "markdown-summary/SKILL.md", skill("markdown-summary", "User override."))
+      shadowed <- Skills.discover[IO](Skills.defaultRoots(Files.createTempDirectory("p"), user, user, Nil, trustProject = false, builtin))
+      alone    <- Skills.discover[IO](builtin.toList.map(Skills.Root(_, Scope.Builtin)))
+      body     <- alone.activate("markdown-summary")
+    yield
+      assert(builtin.isDefined, "yama-skills/ is on the classpath")
+      assertEquals(alone.catalog.map(s => s.name -> s.scope), List("markdown-summary" -> Scope.Builtin))
+      assert(body.exists(_.contains("built into yama")), body)
+      assertEquals(shadowed.catalog.find(_.name == "markdown-summary").map(_.scope), Some(Scope.User))
+  }

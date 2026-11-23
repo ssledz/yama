@@ -11,8 +11,7 @@ cost, every tool call with its arguments and result, and the nested loop of a wo
 on purpose. It exists to show what an agent *is*: **an LLM in a loop, with tools, where the model chooses
 the control flow.**
 
-It is the companion code of the talk
-*The Art of the Agentic Loop* at Art of Scala 2026 (Warsaw, 3 December 2026).
+It is the companion code of the talk *The Art of the Agentic Loop* at Art of Scala 2026 (Warsaw, 3 December 2026).
 
 ## Quick start
 
@@ -22,12 +21,16 @@ Requirements: JDK 21+, sbt, Node 20+ (for the files MCP server).
 npm install --prefix mcp/files-mcp      # the local MCP server (TypeScript)
 cp .env.template .env                   # put your API key(s) in it
 set -a; source .env; set +a             # the JVM does not read .env files (or use direnv)
-sbt yama-cli/run                        # or: sbt yama-cli/assembly && java -jar projects/yama-cli/target/scala-3.*/yama.jar
+sbt "yama-cli/run --config config.json"  # or: sbt yama-cli/assembly && java -jar projects/yama-cli/target/scala-3.*/yama.jar
 ```
 
+Without `--config`, yama reads `~/.yama/config.json`. The first run creates it from the defaults bundled in the
+jar (this repo's `config.json`). Then set the files server's `cwd` there to an absolute path to `mcp/files-mcp`:
+relative paths in the file are resolved against the file's directory.
+
 ```
-yama> download https://example.com and save a short summary as sandbox/example.md
-yama> research what Art of Scala 2026 is about and save a short summary as sandbox/aos.md
+yama> download https://example.com and save a short summary as example.md
+yama> research what Art of Scala 2026 is about and save a short summary as aos.md
 ```
 
 The second one needs `TAVILY_API_KEY`: the orchestrator delegates to `research_agent`, a worker agent that
@@ -35,7 +38,8 @@ searches the web over a remote MCP server.
 
 ## What an agent is
 
-The whole idea fits in [`components/agent/.../internal/Loop.scala`](components/agent/src/main/scala/yama/agent/internal/Loop.scala):
+The whole idea fits in [
+`components/agent/.../internal/Loop.scala`](components/agent/src/main/scala/yama/agent/internal/Loop.scala):
 
 1. send the conversation to the model
 2. the model answers with text → done
@@ -50,12 +54,12 @@ that loop.
 
 The model cannot tell these apart: they all implement the same `Tool[F]` trait (schema + handler).
 
-| tool | kind | what it does |
-|---|---|---|
-| `wget` | native (in-process) | downloads a URL into the sandbox |
-| `fs_read`, `fs_search`, `fs_write`, `fs_manage` | MCP, local (`mcp/files-mcp`, stdio) | sandboxed file access |
-| `activate_skill`, `read_skill_resource` | skills | load a skill's instructions / files on demand |
-| `research_agent` | subagent | a whole agent behind a tool: web research via Tavily (remote MCP) |
+| tool                                            | kind                                | what it does                                                      |
+|-------------------------------------------------|-------------------------------------|-------------------------------------------------------------------|
+| `wget`                                          | native (in-process)                 | downloads a URL into the workspace or session folder              |
+| `fs_read`, `fs_search`, `fs_write`, `fs_manage` | MCP, local (`mcp/files-mcp`, stdio) | sandboxed file access                                             |
+| `activate_skill`, `read_skill_resource`         | skills                              | load a skill's instructions / files on demand                     |
+| `research_agent`                                | subagent                            | a whole agent behind a tool: web research via Tavily (remote MCP) |
 
 The `wget` schema is derived from a case class at compile time:
 
@@ -69,12 +73,12 @@ One component, `chat-openai-compat`, speaks the OpenAI **Responses API** (`POST 
 stateless (full transcript every round, `store: false`). Every provider that exposes it works; a provider is
 just data in `config.json`:
 
-| provider | base URL | key |
-|---|---|---|
-| `openai` (default) | `https://api.openai.com/v1` | `OPENAI_API_KEY` |
-| `openrouter` | `https://openrouter.ai/api/v1` | `OPENROUTER_API_KEY` (pick a model with tool support) |
-| `deepseek` | `https://api.deepseek.com` | `DEEPSEEK_API_KEY` |
-| `ollama` | `http://localhost:11434/v1` | none (Ollama ≥ 0.13.3) |
+| provider           | base URL                       | key                                                   |
+|--------------------|--------------------------------|-------------------------------------------------------|
+| `openai` (default) | `https://api.openai.com/v1`    | `OPENAI_API_KEY`                                      |
+| `openrouter`       | `https://openrouter.ai/api/v1` | `OPENROUTER_API_KEY` (pick a model with tool support) |
+| `deepseek`         | `https://api.deepseek.com`     | `DEEPSEEK_API_KEY`                                    |
+| `ollama`           | `http://localhost:11434/v1`    | none (Ollama ≥ 0.13.3)                                |
 
 Switch with a flag, no code change: `sbt "yama-cli/run --provider openrouter --model openai/gpt-4.1"`.
 
@@ -83,17 +87,17 @@ jitter, capped, honouring `Retry-After`). The agent never learns a retry happene
 
 ## REPL
 
-| command | |
-|---|---|
-| `/help` | list commands |
-| `/tools` | the tools the agent can call |
-| `/prompt` | the system instructions, after placeholder substitution, with the skills catalog |
-| `/history` | the raw conversation the model sees, including tool calls and results |
-| `/stats` | token usage so far, per agent |
-| `/skills` | discovered skills and discovery diagnostics |
-| `/skill <name> <instruction>` | run an instruction with a skill pre-loaded |
-| `/reset` | forget the conversation, reset counters |
-| `/exit` | quit (ctrl-d works too) |
+| command                       |                                                                                  |
+|-------------------------------|----------------------------------------------------------------------------------|
+| `/help`                       | list commands                                                                    |
+| `/tools`                      | the tools the agent can call                                                     |
+| `/prompt`                     | the system instructions, after placeholder substitution, with the skills catalog |
+| `/history`                    | the raw conversation the model sees, including tool calls and results            |
+| `/stats`                      | token usage so far, per agent                                                    |
+| `/skills`                     | discovered skills and discovery diagnostics                                      |
+| `/skill <name> <instruction>` | run an instruction with a skill pre-loaded                                       |
+| `/reset`                      | forget the conversation, reset counters                                          |
+| `/exit`                       | quit (ctrl-d works too)                                                          |
 
 ## Configuration
 
@@ -101,19 +105,33 @@ jitter, capped, honouring `Retry-After`). The agent never learns a retry happene
 printed). Precedence: CLI flag > env var (`YAMA_PROVIDER`, `YAMA_MODEL`) > `config.json`.
 
 ```
-yama [--config config.json] [--provider openrouter] [--model …] [--sandbox ./sandbox] [--max-rounds 25] [--skills-path …]…
+yama [--config-dir ~/.yama] [--config config.json] [--provider openrouter] [--model …] [--sandbox .] [--max-rounds 25] [--skills-path …]…
 ```
 
+yama's home is `--config-dir`, else `$YAMA_CONFIG_DIR`, else `~/.yama`:
+
+```
+~/.yama/config.json                              read when --config is not given; created on first run
+~/.yama/skills/                                  user-level skills
+~/.yama/sessions/<encoded cwd>/<session id>/     one folder per run, e.g. sessions/-Users-me-git-yama/20261124-093015-3fa9c2
+```
+
+A session folder is created only when the agent first writes into it (`fs_write`, `fs_manage` copy/move,
+`wget`); a run that writes nothing leaves nothing behind. An explicit `--config` that does not exist is an
+error, never bootstrapped.
+
 - `chat`: provider, model, retry policy. `providers`: base URL, key env var, headers, capability flags.
-- `agent`: the system prompt (`{{MOUNT}}` and `{{SANDBOX_DIR}}` are substituted), `maxRounds`, and
-  `mcpServers`: which servers' tools the orchestrator gets (the rest are for workers only).
-- `sandbox.dir`: the only directory the agent can write to. It is injected into the files MCP server as
-  `FS_ROOT`, so the server and `wget` can never disagree about it.
+- `agent`: the system prompt, `maxRounds`, and `mcpServers`: which servers' tools the orchestrator gets (the
+  rest are for workers only). Substituted in the prompt: `{{MOUNT}}`/`{{SANDBOX_DIR}}` (the workspace) and
+  `{{SESSION_MOUNT}}`/`{{SESSION_DIR}}` (this run's session folder).
+- The agent can write to exactly two directories: the **workspace** (`sandbox.dir` or `--sandbox`; default: the
+  directory yama runs in) and the **session folder**. Both are injected into the files MCP server as
+  `FS_ROOTS`, and `wget` gets the same list, so they can never disagree. Each is addressed by its folder name.
 - `mcpServers`: no `type` = a local process over stdio; `"type": "http"` = a remote streamable-HTTP server.
   A local server runs as one long-lived process; if it dies it is respawned automatically (exponential
   backoff, gives up after 5 quick crashes in a row). A call in flight at the crash fails fast and is not retried.
   `apiKeyEnv` names an env var sent as `Authorization: Bearer …`; without it the server is skipped.
-- `skills`: extra skill paths and `trustProject`.
+- `skills`: extra skill `paths` (relative to the config file) and `trustProject`.
 - `subagents`: workers exposed to the orchestrator as tools.
 
 ## Skills
@@ -121,15 +139,17 @@ yama [--config config.json] [--provider openrouter] [--model …] [--sandbox ./s
 yama implements the [Agent Skills](https://agentskills.io/specification) format: a skill is a folder with a
 `SKILL.md` (YAML frontmatter + markdown instructions) and optional `scripts/`, `references/`, `assets/`.
 
-- **Discovery**: `<project>/.yama/skills`, `<project>/.agents/skills`, `~/.yama/skills`, `~/.agents/skills`,
-  plus `skills.paths`. Project-level beats user-level on a name collision.
+- **Discovery**: `<project>/.yama/skills`, `<project>/.agents/skills`, `<config-dir>/skills`, `~/.agents/skills`,
+  plus `skills.paths`, then the built-in skills. Project beats user, user beats built-in on a name collision.
 - **Trust**: project-level skills inject instructions, so they load only with `skills.trustProject = true`
   (the default in this repo's `config.json`).
 - **Progressive disclosure**: the catalog (name + description) goes into the system prompt; the body is loaded
   by `activate_skill`; resources are read by `read_skill_resource`, confined to the skill's directory.
 - Validation is lenient: rule violations are warnings (see `/skills`); a missing description or broken YAML
   skips the skill.
-- Bundled: [`skills/markdown-summary`](skills/markdown-summary/SKILL.md), the output-format rules for summaries.
+- Built in: everything under [`skills/`](skills/), e.g. [`markdown-summary`](skills/markdown-summary/SKILL.md).
+  The build copies the folder onto the classpath (`yama-skills/`), so the fat jar carries it and reads it
+  from the classpath, not from the repo.
 - Out of scope: running `scripts/` (yama has no shell tool), enforcing `allowed-tools` (experimental in the
   spec; parsed, not enforced), compaction.
 
@@ -150,20 +170,20 @@ projects/     yama-cli: no code, base + components → fat jar
 development/  the root project: all bricks in one IDE/REPL session
 ```
 
-| brick | what |
-|---|---|
-| `conversation` | `enum Item`, `ToolName`, `CallId`, `Answer` |
-| `config` | `Config` (circe), `Secrets` (ciris), `Config.load` |
-| `log` | `AgentLog[F]` (the verbose loop log), `Stats[F]` |
-| `chat` | `Chat[F]`, `ToolSpec`, `Reply`, `ChatError`, `Chat.retrying` |
-| `chat-openai-compat` | Responses API wire format + http4s call |
-| `tool` | `Tool[F]`, `ToolSchema` (Mirror derivation), `ToolBox[F]` |
-| `wget` | native download tool with a sandbox check |
-| `mcp-client` | thin CE wrapper over the MCP Java SDK; local servers spawned with fs2 process |
-| `mcp-tools` | MCP tools → `Tool[F]` |
-| `skills` | Agent Skills discovery, catalog, `activate_skill`, `read_skill_resource` |
-| `agent` | `Agent[F]` and the loop |
-| `subagent` | an `Agent[F]` wrapped as a `Tool[F]` |
+| brick                | what                                                                          |
+|----------------------|-------------------------------------------------------------------------------|
+| `conversation`       | `enum Item`, `ToolName`, `CallId`, `Answer`                                   |
+| `config`             | `Config` (circe), `Secrets` (ciris), `Config.load`                            |
+| `log`                | `AgentLog[F]` (the verbose loop log), `Stats[F]`                              |
+| `chat`               | `Chat[F]`, `ToolSpec`, `Reply`, `ChatError`, `Chat.retrying`                  |
+| `chat-openai-compat` | Responses API wire format + http4s call                                       |
+| `tool`               | `Tool[F]`, `ToolSchema` (Mirror derivation), `ToolBox[F]`                     |
+| `wget`               | native download tool with a sandbox check                                     |
+| `mcp-client`         | thin CE wrapper over the MCP Java SDK; local servers spawned with fs2 process |
+| `mcp-tools`          | MCP tools → `Tool[F]`                                                         |
+| `skills`             | Agent Skills discovery, catalog, `activate_skill`, `read_skill_resource`      |
+| `agent`              | `Agent[F]` and the loop                                                       |
+| `subagent`           | an `Agent[F]` wrapped as a `Tool[F]`                                          |
 
 Components depend only on other components' interfaces; implementations are `private[<brick>]`.
 `scripts/check-bricks.sh` is the extra CI guard.

@@ -72,3 +72,24 @@ class McpClientSpec extends CatsEffectSuite:
         assert(second.nonEmpty && (second intersect first).isEmpty, s"fresh process: $first -> $second")
     }
   }
+
+  test("a mount root that does not exist yet is created on the first write or copy, not before") {
+    assume(Files.isDirectory(serverDir.resolve("node_modules")), "run npm install --prefix mcp/files-mcp")
+    val tmp       = Files.createTempDirectory("yama-mcp")
+    val workspace = Files.createDirectories(tmp.resolve("work"))
+    val session   = tmp.resolve("sessions/s1") // does not exist
+    Files.writeString(workspace.resolve("a.md"), "# A\n")
+    val roots = McpServer.Local("files", "npx", List("tsx", "src/index.ts"), Some(serverDir), Map("FS_ROOTS" -> s"$workspace,$session"))
+    McpClient.connect[IO](roots).use { client =>
+      for
+        listed  <- client.callTool("fs_read", Json.obj("path" -> ".".asJson))
+        absent   = !Files.exists(session)
+        copied  <- client.callTool("fs_manage", Json.obj("operation" -> "copy".asJson, "path" -> "work/a.md".asJson, "target" -> "s1/copy/a.md".asJson))
+        written <- client.callTool("fs_write", Json.obj("path" -> "s1/notes/n.md".asJson, "operation" -> "create".asJson, "content" -> "# N".asJson))
+      yield
+        assert(listed.noSpaces.contains("s1"), listed.noSpaces)
+        assert(absent, "listing the mounts does not create the session folder")
+        assert(Files.exists(session.resolve("copy/a.md")), copied.noSpaces)
+        assert(Files.exists(session.resolve("notes/n.md")), written.noSpaces)
+    }
+  }

@@ -89,8 +89,16 @@ def artifactProject(name: String): Project =
 lazy val conversation = component("conversation")
   .settings(libraryDependencies ++= Seq(D.circeCore))
 
+// The repo's config.json is bundled as yama/default-config.json: written to ~/.yama/config.json on first run.
 lazy val config = component("config")
-  .settings(libraryDependencies ++= Seq(D.circeCore, D.circeParser, D.ciris, D.cirisCirce))
+  .settings(
+    libraryDependencies ++= Seq(D.circeCore, D.circeParser, D.ciris, D.cirisCirce),
+    Compile / resourceGenerators += Def.task {
+      val out = (Compile / resourceManaged).value / "yama" / "default-config.json"
+      IO.copyFile((ThisBuild / baseDirectory).value / "config.json", out)
+      Seq(out)
+    }.taskValue
+  )
 
 lazy val log = component("log")
   .dependsOn(conversation)
@@ -121,9 +129,22 @@ lazy val mcpClient = component("mcp-client")
 lazy val mcpTools = component("mcp-tools")
   .dependsOn(mcpClient, tool)
 
+// The repo's skills/ folder is bundled as classpath resources under yama-skills/ (see Skills.builtinRoot),
+// so the fat jar carries its built-in skills. The .root marker lets the folder be found inside a jar.
 lazy val skills = component("skills")
   .dependsOn(tool)
-  .settings(libraryDependencies ++= Seq(D.circeYaml))
+  .settings(
+    libraryDependencies ++= Seq(D.circeYaml),
+    Compile / resourceGenerators += Def.task {
+      val src = (ThisBuild / baseDirectory).value / "skills"
+      val out = (Compile / resourceManaged).value / "yama-skills"
+      IO.delete(out)
+      val copies = (src ** "*").get.filter(_.isFile).flatMap(f => IO.relativize(src, f).map(rel => f -> out / rel))
+      IO.copy(copies)
+      IO.write(out / ".root", "")
+      copies.map(_._2) :+ (out / ".root")
+    }.taskValue
+  )
 
 lazy val agent = component("agent")
   .dependsOn(conversation, chat % "compile->compile;test->test", tool, log)

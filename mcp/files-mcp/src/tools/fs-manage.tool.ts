@@ -5,6 +5,7 @@
  */
 
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { getMounts, resolvePath as resolveVirtualPath, validatePathChain } from '../lib/index.js';
@@ -440,6 +441,9 @@ DELETE IS PERMANENT — only single files or empty directories can be deleted (n
             errorResult.target = virtualTarget;
             return { content: [{ type: 'text', text: JSON.stringify(errorResult, null, 2) }] };
           }
+
+          // the target's mount may not exist yet (yama creates its session folder only on first write)
+          await fs.mkdir(path.dirname(absTarget), { recursive: true });
 
           if (input.operation === 'copy') {
             await copyPath(absSource, absTarget, {

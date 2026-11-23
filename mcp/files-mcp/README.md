@@ -353,7 +353,7 @@ Structural filesystem operations.
     operation: string;
     path: string;
     target ? : string;
-    stat ? : {size, modified, created, isDirectory};
+    stat ?: {size, modified, created, isDirectory};
     hint: string;
 }
 ```
