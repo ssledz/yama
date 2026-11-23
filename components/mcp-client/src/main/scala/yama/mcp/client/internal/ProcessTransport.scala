@@ -23,7 +23,11 @@ private[client] final class ProcessTransport[F[_]: Async](
     outbound: Queue[F, String],
     inboundHandler: Deferred[F, Function[Mono[JSONRPCMessage], Mono[JSONRPCMessage]]],
     mapper: McpJsonMapper,
-    dispatcher: Dispatcher[F]
+    dispatcher: Dispatcher[F],
+    /** Completes with a reason once the process has exited or its stdout has closed: the transport is dead then. */
+    val exited: F[String],
+    /** The same, without waiting: `Some(reason)` once dead. */
+    val dead: F[Option[String]]
 ) extends McpClientTransport:
 
   private def toMono(fa: F[Unit]): Mono[Void] =
@@ -50,6 +54,8 @@ private[client] object ProcessTransport:
       dispatcher <- Dispatcher.parallel[F](await = false)
       outbound   <- Resource.eval(Queue.unbounded[F, String])
       handler    <- Resource.eval(Deferred[F, Function[Mono[JSONRPCMessage], Mono[JSONRPCMessage]]])
+      stdoutEof  <- Resource.eval(Deferred[F, Unit])
+      death      <- Resource.eval(Deferred[F, String])
       mapper      = McpJsonDefaults.getMapper()
       // stdin: one JSON-RPC message per line
       _ <- Stream.fromQueueUnterminated(outbound).map(_ + "\n").through(text.utf8.encode)
@@ -61,8 +67,15 @@ private[client] object ProcessTransport:
                  case Right(message) => handler.get.flatMap(h => Async[F].delay(h.apply(Mono.just(message)).subscribe()).void)
                  case Left(_)        => stderrLog.warn(s"[${server.name}] not JSON-RPC on stdout: $line")
                }
-             }.compile.drain.background
+             }.compile.drain.guarantee(stdoutEof.complete(()).void).background
       // stderr: the server's own logs stay visible
       _ <- process.stderr.through(text.utf8.decode).through(text.lines).filter(_.trim.nonEmpty)
              .evalMap(line => stderrLog.info(s"[${server.name}] $line")).compile.drain.background
-    yield ProcessTransport(outbound, handler, mapper, dispatcher)
+      // death: whichever comes first, the exit code or the end of stdout (a hung-up pipe is as dead as an exit)
+      _ <- Async[F].race(process.exitValue, stdoutEof.get)
+             .map {
+               case Left(code) => s"exited with code $code"
+               case Right(_)   => "closed its stdout"
+             }
+             .flatMap(death.complete).background
+    yield ProcessTransport(outbound, handler, mapper, dispatcher, death.get, death.tryGet)

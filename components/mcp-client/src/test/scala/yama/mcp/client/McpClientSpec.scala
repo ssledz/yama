@@ -1,6 +1,7 @@
 package yama.mcp.client
 
 import cats.effect.{IO, Ref}
+import cats.syntax.all.*
 import io.circe.Json
 import io.circe.syntax.*
 import munit.CatsEffectSuite
@@ -47,4 +48,27 @@ class McpClientSpec extends CatsEffectSuite:
       assert(started.nonEmpty, "the server process was spawned")
       val alive = started.filter(pid => ProcessHandle.of(pid).toScala.exists(_.isAlive))
       assertEquals(alive, Set.empty[Long], "no leaked child processes")
+  }
+
+  test("respawns the server after its process is killed") {
+    assume(Files.isDirectory(serverDir.resolve("node_modules")), "run npm install --prefix mcp/files-mcp")
+    val root = Files.createDirectories(Files.createTempDirectory("yama-mcp").resolve("sandbox"))
+    Files.writeString(root.resolve("hello.md"), "# Still here\n")
+    val read   = (c: McpClient[IO]) => c.callTool("fs_read", Json.obj("path" -> "sandbox/hello.md".asJson))
+    val policy = RestartPolicy(initialBackoff = 50.millis)
+    val before = children
+    McpClient.connect[IO](server(root), policy).use { client =>
+      for
+        _     <- read(client)
+        first  = children -- before
+        // kill -9 the whole chain (npx -> tsx -> node), wait for it to be gone, give the transport a moment to notice
+        _     <- first.flatMap(pid => ProcessHandle.of(pid).toScala).toList.traverse_ { p =>
+                   IO(p.destroyForcibly()) *> IO.fromCompletableFuture(IO(p.onExit()))
+                 } *> IO.sleep(200.millis)
+        again <- read(client)
+        second = children -- before
+      yield
+        assert(again.noSpaces.contains("Still here"), again.noSpaces)
+        assert(second.nonEmpty && (second intersect first).isEmpty, s"fresh process: $first -> $second")
+    }
   }

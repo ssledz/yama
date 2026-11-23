@@ -110,6 +110,8 @@ yama [--config config.json] [--provider openrouter] [--model …] [--sandbox ./s
 - `sandbox.dir`: the only directory the agent can write to. It is injected into the files MCP server as
   `FS_ROOT`, so the server and `wget` can never disagree about it.
 - `mcpServers`: no `type` = a local process over stdio; `"type": "http"` = a remote streamable-HTTP server.
+  A local server runs as one long-lived process; if it dies it is respawned automatically (exponential
+  backoff, gives up after 5 quick crashes in a row). A call in flight at the crash fails fast and is not retried.
   `apiKeyEnv` names an env var sent as `Authorization: Bearer …`; without it the server is skipped.
 - `skills`: extra skill paths and `trustProject`.
 - `subagents`: workers exposed to the orchestrator as tools.
