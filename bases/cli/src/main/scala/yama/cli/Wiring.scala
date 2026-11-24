@@ -168,7 +168,7 @@ object Wiring:
 
   private def banner(config: Config, where: Locations, mounts: Mounts, skills: List[String], agents: List[String]): String =
     val lines = List(
-      "yama: Yet Another Micro Agent",
+      s"yama ${Version.current}: Yet Another Micro Agent",
       s"config:   ${where.configFile}",
       s"provider: ${config.chat.provider}",
       s"model:    ${config.chat.model}",
