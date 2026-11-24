@@ -186,6 +186,26 @@ lazy val cli = base("cli")
 // Projects (no code: base + components -> artifact)
 // ---------------------------------------------------------------------------
 
+// sbt-assembly's universal (sh + cmd) launcher, plus --sun-misc-unsafe-memory-access=allow when the java on the PATH
+// knows the flag (JDK 23+): JDK 24+ warns on stderr once Scala 3 LazyVals touches sun.misc.Unsafe, and JDK 21-22
+// refuse to start with the flag, so it is probed first (one `java -version` run, ~50 ms).
+lazy val launcherScript: Seq[String] = {
+  val flag = "--sun-misc-unsafe-memory-access=allow"
+  val sh = Seq(
+    s"""java $flag -version >/dev/null 2>&1 && JAVA_OPTS="$flag $$JAVA_OPTS"""",
+    s"""exec java $$JAVA_OPTS -jar "$$0" "$$@""""
+  )
+  val cmd = Seq(
+    "set YAMA_OPTS=%JAVA_OPTS%",
+    s"java $flag -version >nul 2>&1 && set YAMA_OPTS=$flag %JAVA_OPTS%",
+    "java %YAMA_OPTS% -jar \"%~dpnx0\" %*"
+  )
+  Seq(Seq(
+    Seq("@ 2>/dev/null # 2>nul & echo off & goto BOF\r", ":", sh.mkString("\n"), "exit").mkString("\n"),
+    Seq("", ":BOF", cmd.mkString("\r\n"), "exit /B %errorlevel%", "").mkString("\r\n")
+  ).mkString("\n"))
+}
+
 lazy val yamaCli = artifactProject("yama-cli")
   .dependsOn(cli)
   .settings(
@@ -197,7 +217,7 @@ lazy val yamaCli = artifactProject("yama-cli")
     assembly / mainClass      := Some("yama.cli.Main"),
     assembly / assemblyJarName := "yama.jar",
     // a launcher script in front of the zip: `./yama.jar` runs it (sh or cmd), `java -jar yama.jar` still works
-    assembly / assemblyPrependShellScript := Some(AssemblyPlugin.defaultUniversalScript(shebang = false)),
+    assembly / assemblyPrependShellScript := Some(launcherScript),
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "versions", _, "module-info.class") => MergeStrategy.discard
       case "module-info.class"                                      => MergeStrategy.discard
