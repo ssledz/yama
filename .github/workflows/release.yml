@@ -1,0 +1,68 @@
+name: release
+
+# Releases happen only by merging a pull request into main (normally release/vX.Y.Z, opened by `sbt release` on
+# develop). On merge: if version.sbt holds a non-snapshot version that has no tag yet, build the executable fat jar,
+# tag the merge commit vX.Y.Z and publish a GitHub release with the jar attached as `yama`. Any other merge into main
+# (version unchanged, already released, or a snapshot) does nothing.
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    env:
+      SHA: ${{ github.event.pull_request.merge_commit_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0 # tags
+
+      - name: Version to release?
+        id: version
+        run: |
+          version=$(sed -nE 's/.*version := "([^"]+)".*/\1/p' version.sbt)
+          echo "version.sbt: $version"
+          if [[ "$version" == *-SNAPSHOT ]]; then
+            echo "snapshot: nothing to release"; echo "release=false" >> "$GITHUB_OUTPUT"
+          elif git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "v$version is already released"; echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"; echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-java@v4
+        if: steps.version.outputs.release == 'true'
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
+        if: steps.version.outputs.release == 'true'
+
+      - name: Build the fat jar
+        if: steps.version.outputs.release == 'true'
+        run: |
+          sbt yama-cli/assembly
+          cp projects/yama-cli/target/scala-3.*/yama.jar yama
+          chmod +x yama
+          ./yama --help > /dev/null   # the launcher script in front of the jar works
+
+      - name: Tag and publish ${{ steps.version.outputs.tag }}
+        if: steps.version.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: gh release create "$TAG" yama --target "$SHA" --title "yama ${TAG#v}" --generate-notes
