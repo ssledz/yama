@@ -1,20 +1,15 @@
 name: release
 
-# Two ways to publish the executable fat jar (`yama`) as a GitHub release:
+# Publishes the executable fat jar (`yama`) as a GitHub release. Runs only by hand
+# (Actions -> release -> Run workflow, pick the branch); merging into main publishes nothing.
 #
-#   Merging a PR into main (normally release/vX.Y.Z, opened by `sbt release` on develop):
-#     version.sbt holds X.Y.Z and vX.Y.Z is not tagged yet -> tag the merge commit vX.Y.Z, publish the release.
-#     Anything else (a snapshot, an already tagged version) publishes nothing.
-#
-#   By hand (Actions -> release -> Run workflow, pick the branch):
-#     main    -> the same as a merge: release X.Y.Z, refused if it is a snapshot or already tagged.
-#     develop -> a pre-release of the snapshot, e.g. v0.2.0-SNAPSHOT at the current develop commit. Running it again
-#                replaces it, so there is one pre-release per snapshot version, always the latest build.
+#   main    -> release X.Y.Z from version.sbt with -SNAPSHOT stripped (0.1.0-SNAPSHOT -> 0.1.0): build the jar with
+#              that version, tag the main commit vX.Y.Z, publish the release, then bump develop to the next minor
+#              snapshot (0.2.0-SNAPSHOT) if it still holds X.Y.Z-SNAPSHOT. Refused if vX.Y.Z is already tagged.
+#   develop -> a pre-release of the snapshot, e.g. v0.2.0-SNAPSHOT at the current develop commit. Running it again
+#              replaces it, so there is one pre-release per snapshot version, always the latest build.
 
 on:
-  pull_request:
-    types: [closed]
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -26,59 +21,51 @@ concurrency:
 
 jobs:
   release:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     env:
-      SHA: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+      SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
-          fetch-depth: 0 # tags
+          fetch-depth: 0 # tags, develop
 
       - name: What to release?
         id: plan
         env:
-          EVENT: ${{ github.event_name }}
           BRANCH: ${{ github.ref_name }}
         run: |
-          version=$(sed -nE 's/.*version := "([^"]+)".*/\1/p' version.sbt)
-          tagged() { git rev-parse -q --verify "refs/tags/v$version" >/dev/null; }
-          skip() { echo "$1"; echo "mode=skip" >> "$GITHUB_OUTPUT"; exit 0; }
+          snapshot=$(sed -nE 's/.*version := "([^"]+)".*/\1/p' version.sbt)
           fail() { echo "::error::$1"; exit 1; }
-          echo "event: $EVENT, branch: $BRANCH, version.sbt: $version"
-          if [[ "$EVENT" == pull_request ]]; then
-            [[ "$version" == *-SNAPSHOT ]] && skip "snapshot on main: nothing to release"
-            tagged && skip "v$version is already released"
-            mode=release
-          elif [[ "$BRANCH" == main ]]; then
-            [[ "$version" == *-SNAPSHOT ]] && fail "main holds a snapshot ($version): merge a release PR first"
-            tagged && fail "v$version is already released: bump the version with sbt release on develop"
+          echo "branch: $BRANCH, version.sbt: $snapshot"
+          if [[ "$BRANCH" == main ]]; then
+            version=${snapshot%-SNAPSHOT}
+            [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "main holds $snapshot: expected X.Y.Z[-SNAPSHOT]"
+            git rev-parse -q --verify "refs/tags/v$version" >/dev/null \
+              && fail "v$version is already released: bump the version in version.sbt on develop and merge it"
             mode=release
           elif [[ "$BRANCH" == develop ]]; then
-            [[ "$version" == *-SNAPSHOT ]] || fail "develop holds $version: expected a -SNAPSHOT version"
+            [[ "$snapshot" == *-SNAPSHOT ]] || fail "develop holds $snapshot: expected a -SNAPSHOT version"
+            version=$snapshot
             mode=prerelease
           else
             fail "release from main or develop, not $BRANCH"
           fi
+          echo "releasing $version ($mode)"
           { echo "mode=$mode"; echo "version=$version"; echo "tag=v$version"; } >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v4
-        if: steps.plan.outputs.mode != 'skip'
         with:
           distribution: temurin
           java-version: "21"
           cache: sbt
 
       - uses: sbt/setup-sbt@v1
-        if: steps.plan.outputs.mode != 'skip'
 
       - name: Build the fat jar
-        if: steps.plan.outputs.mode != 'skip'
         env:
           VERSION: ${{ steps.plan.outputs.version }}
         run: |
-          sbt yama-cli/assembly
+          sbt "set ThisBuild / version := \"$VERSION\"" yama-cli/assembly   # main: the version without -SNAPSHOT
           cp projects/yama-cli/target/scala-3.*/yama.jar yama
           chmod +x yama
           ./yama --version | tee /dev/stderr | grep -qx "$VERSION"   # the launcher works and the version is baked in
@@ -102,3 +89,23 @@ jobs:
           gh release create "$TAG" yama --target "$SHA" --prerelease --latest=false \
             --title "yama ${TAG#v} (${SHA::7})" \
             --notes "Development build of develop at $SHA. Replaced by every manual release run on develop."
+
+      - name: Bump develop to the next snapshot
+        if: steps.plan.outputs.mode == 'release'
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+        run: |
+          IFS=. read -r major minor _ <<< "$VERSION"
+          next="$major.$((minor + 1)).0-SNAPSHOT"
+          git checkout -B develop origin/develop
+          dev=$(sed -nE 's/.*version := "([^"]+)".*/\1/p' version.sbt)
+          if [[ "$dev" != "$VERSION-SNAPSHOT" ]]; then
+            echo "develop holds $dev, not $VERSION-SNAPSHOT: leaving it as is"
+            exit 0
+          fi
+          sed -i -E "s/(version := \")[^\"]+(\")/\1$next\2/" version.sbt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Set version to $next"
+          git push origin develop
+          echo "develop bumped to $next"
