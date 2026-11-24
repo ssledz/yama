@@ -16,7 +16,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # npm provenance
+  id-token: write # npm provenance (used only while the repo is public)
 
 concurrency:
   group: publish-files-mcp
@@ -65,6 +65,8 @@ jobs:
 
       - name: Publish ${{ steps.check.outputs.spec }}
         if: steps.check.outputs.publish == 'true'
-        run: npm publish --provenance --access public
+        # npm accepts provenance only from public repos (E422 "Unsupported ... visibility: private" otherwise)
+        run: npm publish --access public $PROVENANCE
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PROVENANCE: ${{ github.event.repository.visibility == 'public' && '--provenance' || '' }}
