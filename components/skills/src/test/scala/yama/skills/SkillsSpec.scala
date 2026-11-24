@@ -8,6 +8,8 @@ import yama.conversation.{CallId, Item, ToolName}
 import yama.tool.{Tool, ToolBox}
 
 import java.nio.file.{Files, Path}
+import java.util.zip.{ZipEntry, ZipOutputStream}
+import scala.util.Using
 
 class SkillsSpec extends CatsEffectSuite:
 
@@ -121,8 +123,7 @@ class SkillsSpec extends CatsEffectSuite:
   }
 
   test("built-in skills come from the classpath, below user-level ones") {
-    for
-      builtin <- Skills.builtinRoot[IO]
+    Skills.builtinRoot[IO].use(builtin => for
       user     = Files.createTempDirectory("yama-user")
       _        = write(user, "markdown-summary/SKILL.md", skill("markdown-summary", "User override."))
       shadowed <- Skills.discover[IO](Skills.defaultRoots(Files.createTempDirectory("p"), user, user, Nil, trustProject = false, builtin))
@@ -133,4 +134,29 @@ class SkillsSpec extends CatsEffectSuite:
       assertEquals(alone.catalog.map(s => s.name -> s.scope), List("markdown-summary" -> Scope.Builtin))
       assert(body.exists(_.contains("built into yama")), body)
       assertEquals(shadowed.catalog.find(_.name == "markdown-summary").map(_.scope), Some(Scope.User))
+    )
+  }
+
+  test("built-in skills load from a jar with a launcher script before the zip, like the fat jar") {
+    val jar = Files.createTempFile("yama", ".jar")
+    Using.resource(Files.newOutputStream(jar)) { out =>
+      out.write("#!/usr/bin/env sh\nexec java -jar \"$0\" \"$@\"\n".getBytes)
+      Using.resource(new ZipOutputStream(out)) { zip =>
+        for (name, content) <- List(".root" -> "", "markdown-summary/SKILL.md" -> skill("markdown-summary", "Built in."), "markdown-summary/ref.md" -> "ref")
+        do
+          zip.putNextEntry(new ZipEntry(s"${Skills.BuiltinResource}/$name"))
+          zip.write(content.getBytes)
+          zip.closeEntry()
+      }
+    }
+    for
+      (dir, names, resource) <- Skills.fromJar[IO](jar).use { dir =>
+        Skills.discover[IO](List(Skills.Root(dir, Scope.Builtin))).flatMap { skills =>
+          skills.readResource("markdown-summary", "ref.md").map(r => (dir, skills.catalog.map(_.name), r))
+        }
+      }
+    yield
+      assertEquals(names, List("markdown-summary"))
+      assertEquals(resource, Right("ref"))
+      assert(!Files.exists(dir), "the extracted skills are removed on release")
   }
