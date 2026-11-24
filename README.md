@@ -25,8 +25,14 @@ sbt "yama-cli/run --config config.json"  # or: sbt yama-cli/assembly && java -ja
 ```
 
 Without `--config`, yama reads `~/.yama/config.json`. The first run creates it from the defaults bundled in the
-jar (this repo's `config.json`). Then set the files server's `cwd` there to an absolute path to `mcp/files-mcp`:
-relative paths in the file are resolved against the file's directory.
+jar (this repo's `config.json`). If `npx` is on the `PATH`, the files server in it runs the published package,
+pinned to the version built with this yama: `npx -y --package @ssledz/files-mcp@<version> files-mcp`. Without
+`npx`, set the files server's `cwd` to an absolute path to an `mcp/files-mcp` checkout (relative paths in the
+file are resolved against the file's directory).
+
+`mcp/files-mcp` is published to npmjs as [`@ssledz/files-mcp`](https://www.npmjs.com/package/@ssledz/files-mcp)
+by `.github/workflows/publish-files-mcp.yml` whenever it changes on `main` and its `version` is not on npm yet
+(bump `version` in its `package.json` to release; the workflow needs the `NPM_TOKEN` secret).
 
 ```
 yama> download https://example.com and save a short summary as example.md

@@ -90,13 +90,21 @@ lazy val conversation = component("conversation")
   .settings(libraryDependencies ++= Seq(D.circeCore))
 
 // The repo's config.json is bundled as yama/default-config.json: written to ~/.yama/config.json on first run.
+// yama/files-mcp.package holds "<name>@<version>" and the bin name from mcp/files-mcp/package.json: what first run
+// points npx at.
 lazy val config = component("config")
   .settings(
     libraryDependencies ++= Seq(D.circeCore, D.circeParser, D.ciris, D.cirisCirce),
     Compile / resourceGenerators += Def.task {
-      val out = (Compile / resourceManaged).value / "yama" / "default-config.json"
-      IO.copyFile((ThisBuild / baseDirectory).value / "config.json", out)
-      Seq(out)
+      val root    = (ThisBuild / baseDirectory).value
+      val out     = (Compile / resourceManaged).value / "yama"
+      val pkg     = IO.read(root / "mcp" / "files-mcp" / "package.json")
+      def field(name: String) =
+        ("\"" + name + "\"" + """\s*:\s*"([^"]+)"""").r.findFirstMatchIn(pkg).map(_.group(1)).getOrElse(sys.error(s"no $name in files-mcp/package.json"))
+      IO.copyFile(root / "config.json", out / "default-config.json")
+      val bin     = """"bin"\s*:\s*\{\s*"([^"]+)"""".r.findFirstMatchIn(pkg).map(_.group(1)).getOrElse(sys.error("no bin in files-mcp/package.json"))
+      IO.write(out / "files-mcp.package", s"${field("name")}@${field("version")}\n$bin\n")
+      Seq(out / "default-config.json", out / "files-mcp.package")
     }.taskValue
   )
 

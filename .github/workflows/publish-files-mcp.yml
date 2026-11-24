@@ -1,0 +1,70 @@
+name: publish files-mcp
+
+# Publishes mcp/files-mcp to npmjs.org as @ssledz/files-mcp, so yama can run it with `npx -y @ssledz/files-mcp@<version>`.
+# Runs when files-mcp changes on main (or by hand). Publishing is skipped when the version in package.json is
+# already on npm: bump "version" to release.
+#
+# Needs the repo secret NPM_TOKEN: an npm automation (or granular, publish-enabled) token for the @ssledz scope.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - mcp/files-mcp/**
+      - .github/workflows/publish-files-mcp.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # npm provenance
+
+concurrency:
+  group: publish-files-mcp
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp/files-mcp
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: mcp/files-mcp/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Already published?
+        id: check
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          echo "spec=$name@$version" >> "$GITHUB_OUTPUT"
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "$name@$version is already on npm: bump the version in package.json to publish"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        run: npm run build
+
+      - name: Smoke test the bundle
+        run: |
+          out=$(FS_ROOT="$RUNNER_TEMP" timeout 5 node dist/index.js </dev/null 2>&1 || true)
+          echo "$out"
+          echo "$out" | grep -q "sandbox roots"
+
+      - name: Publish ${{ steps.check.outputs.spec }}
+        if: steps.check.outputs.publish == 'true'
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

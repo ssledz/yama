@@ -1,13 +1,13 @@
 package yama.config
 
-import cats.effect.{Async, Sync}
+import cats.effect.Async
 import cats.syntax.all.*
 import ciris.*
 import ciris.circe.circeConfigDecoder
 import io.circe.{Decoder, DecodingFailure}
 import io.circe.derivation.{Configuration, ConfiguredDecoder}
 
-import java.nio.file.{Files, Path}
+import java.nio.file.Path
 
 private given Configuration = Configuration.default.withDefaults
 
@@ -90,23 +90,6 @@ final case class Overrides(
 )
 
 object Config:
-  /** Classpath resource holding the default config (the repo's `config.json`, copied in by the build). */
-  val DefaultResource = "yama/default-config.json"
-
-  /** First run: write the bundled default config to `file` unless it exists. `true` when it was written. */
-  def bootstrap[F[_]: Sync](file: Path): F[Boolean] =
-    Sync[F].blocking {
-      if Files.exists(file) then false
-      else
-        val in = Option(getClass.getClassLoader.getResourceAsStream(DefaultResource))
-          .getOrElse(throw IllegalStateException(s"$DefaultResource is not on the classpath"))
-        try
-          Files.createDirectories(file.getParent)
-          Files.copy(in, file)
-          true
-        finally in.close()
-    }
-
   def load[F[_]: Async](path: Path, overrides: Overrides): F[Config] =
     (
       file(path).as[Config](using circeConfigDecoder("Config")),

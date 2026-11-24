@@ -12,7 +12,7 @@ import org.typelevel.log4cats.{Logger, LoggerFactory}
 import yama.agent.Agent
 import yama.chat.Chat
 import yama.chat.openai.{OpenAiCompat, ProviderConfig}
-import yama.config.{Config, Locations, McpServerSettings, Overrides, Secrets}
+import yama.config.{Bootstrap, Config, Locations, McpServerSettings, Overrides, Secrets}
 import yama.log.{AgentLog, Stats}
 import yama.mcp.client.{McpClient, McpServer}
 import yama.mcp.tools.McpTools
@@ -98,8 +98,14 @@ object Wiring:
   private def loadConfig[F[_]: Async: Logger](where: Locations, overrides: Overrides): F[Config] =
     val created =
       if where.bootstrap then
-        Config.bootstrap[F](where.configFile).flatTap(Logger[F].info(s"first run: created ${where.configFile} with the default config").whenA(_))
-      else false.pure[F]
+        Bootstrap.write[F](where.configFile, Bootstrap.npxOnPath(sys.env.get("PATH"))).flatMap {
+          case Bootstrap.Outcome.Written(true)  =>
+            Logger[F].info(s"first run: created ${where.configFile}; the files MCP server runs from npm via npx")
+          case Bootstrap.Outcome.Written(false) =>
+            Logger[F].warn(s"first run: created ${where.configFile}; npx not found, so set mcpServers.files.cwd to a files-mcp checkout")
+          case Bootstrap.Outcome.Existing => Async[F].unit
+        }
+      else Async[F].unit
     created *> Async[F].blocking(java.nio.file.Files.isRegularFile(where.configFile)).flatMap { exists =>
       if exists then Config.load[F](where.configFile, overrides)
       else

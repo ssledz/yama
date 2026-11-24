@@ -76,18 +76,3 @@ class ConfigSpec extends CatsEffectSuite:
       assertEquals(local.chatApiKey.value, "unused")
       assert(remote.isLeft)
   }
-
-  test("bootstrap writes the bundled default config once, and it loads") {
-    val file = Files.createTempDirectory("yama-home").resolve("nested/config.json")
-    for
-      first  <- Config.bootstrap[IO](file)
-      _      <- IO(Files.writeString(file, Files.readString(file) + " "))
-      second <- Config.bootstrap[IO](file)
-      config <- Config.load[IO](file, Overrides())
-    yield
-      assert(first, "written on first run")
-      assert(!second, "an existing file is left alone")
-      assert(Files.readString(file).endsWith(" "), "not overwritten")
-      assertEquals(config.mcpServers.keySet, Set("files", "tavily"))
-  }
-
