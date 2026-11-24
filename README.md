@@ -24,6 +24,10 @@ set -a; source .env; set +a             # the JVM does not read .env files (or u
 sbt "yama-cli/run --config config.json"  # or: sbt yama-cli/assembly && java -jar projects/yama-cli/target/scala-3.*/yama.jar
 ```
 
+Or download `yama` from the [releases](https://github.com/ssledz/yama/releases): an executable fat jar
+(`chmod +x yama && ./yama`, or `java -jar yama`; JDK 21+). `sbt yama-cli/assembly` builds the same file as
+`projects/yama-cli/target/scala-3.*/yama.jar`.
+
 Without `--config`, yama reads `~/.yama/config.json`. The first run creates it from the defaults bundled in the
 jar (this repo's `config.json`). If `npx` is on the `PATH`, the files server in it runs the published package,
 pinned to the version built with this yama: `npx -y --package @ssledz/files-mcp@<version> files-mcp`. Without
@@ -204,6 +208,24 @@ The loop is fully deterministic in tests: `Chat[F]` is a trait, so `ScriptedChat
 records every request (`AgentSpec`, `SubAgentToolSpec`). `chat-openai-compat` has golden-JSON tests for the
 wire format. `McpClientSpec` is an integration test that spawns `mcp/files-mcp` (run `npm install --prefix
 mcp/files-mcp` first).
+
+## Branches and releases
+
+Work happens on `develop` (CI runs on every push and PR). `main` only receives pull requests, and only a merged
+PR into `main` can publish a release.
+
+The version lives in `version.sbt` (semver, `X.Y.Z-SNAPSHOT` on `develop`). To release, on a clean `develop`:
+
+```bash
+sbt release            # asks for the release and next version; `sbt "release with-defaults"` takes 0.1.0 / 0.2.0-SNAPSHOT
+```
+
+It runs the tests, commits `X.Y.Z` on a new branch `release/vX.Y.Z`, bumps `develop` to the next minor snapshot,
+pushes both and opens the PR `release/vX.Y.Z` → `main` (with `gh`; otherwise it prints the link). Merging that PR
+runs `.github/workflows/release.yml`: it builds the executable fat jar, tags the merge commit `vX.Y.Z` and
+publishes a GitHub release with the jar attached as `yama`. A merge into `main` whose `version.sbt` is a snapshot
+or already tagged releases nothing. Pick versions explicitly with
+`sbt "release release-version 1.0.0 next-version 1.1.0-SNAPSHOT"`.
 
 ## Credits
 
