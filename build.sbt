@@ -8,7 +8,7 @@
 // Rules: components depend only on component interfaces; nothing depends on a base or a project; no cycles.
 
 ThisBuild / organization := "io.github.ssledz"
-// version: see version.sbt, owned by sbt-release (`sbt release`)
+// version: see version.sbt; releases are cut by hand with .github/workflows/release.yml
 ThisBuild / scalaVersion := "3.10.1"
 
 ThisBuild / scalacOptions ++= Seq(
@@ -219,70 +219,7 @@ lazy val development = (project in file("."))
     Compile / scalaSource    := baseDirectory.value / "development" / "src" / "main" / "scala",
     Compile / resourceDirectory := baseDirectory.value / "development" / "src" / "main" / "resources",
     Test / scalaSource       := baseDirectory.value / "development" / "src" / "test" / "scala",
-    publish / skip           := true,
-    // `sbt release` (on develop) prepares a release; merging its PR into main publishes it (see releaseFlow below).
-    // Semver X.Y.Z; the next version bumps the minor (0.1.0 -> 0.2.0-SNAPSHOT). Override per release:
-    // `sbt "release release-version 1.0.0 next-version 1.1.0-SNAPSHOT"`.
-    releaseVersionBump := sbtrelease.Version.Bump.Minor,
-    releaseProcess     := releaseFlow
+    publish / skip           := true
   )
   .aggregate((components :+ cli :+ yamaCli).map(p => p: ProjectReference) *)
   .dependsOn((components :+ cli).map(p => p: ClasspathDep[ProjectReference]) *)
-
-// ---------------------------------------------------------------------------
-// Release flow: develop -> PR -> main
-// ---------------------------------------------------------------------------
-//
-// `sbt release` on develop: test, commit X.Y.Z to version.sbt on a new branch release/vX.Y.Z, bump develop to the
-// next snapshot, push both, open a PR release/vX.Y.Z -> main. No tag here: merging the PR makes
-// .github/workflows/release.yml build the fat jar, tag vX.Y.Z and publish the GitHub release.
-
-def git(args: String*): String = scala.sys.process.Process("git" +: args).!!.trim
-
-def releaseBranch(st: State): String =
-  "release/v" + st.get(sbtrelease.ReleasePlugin.autoImport.ReleaseKeys.versions).get._1
-
-lazy val onDevelop = ReleaseStep { st: State =>
-  val branch = git("rev-parse", "--abbrev-ref", "HEAD")
-  if (branch != "develop") sys.error(s"release from develop, not '$branch'")
-  st
-}
-
-lazy val branchRelease = ReleaseStep { st: State =>
-  val branch = releaseBranch(st)
-  git("branch", branch) // at the release commit; develop moves on to the next snapshot
-  st.log.info(s"created $branch")
-  st
-}
-
-lazy val pushAndOpenPr = ReleaseStep { st: State =>
-  val branch = releaseBranch(st)
-  git("push", "origin", "develop", branch)
-  val title = "Release " + branch.stripPrefix("release/")
-  val hasGh = scala.util.Try(scala.sys.process.Process(Seq("gh", "--version")).!!).isSuccess
-  if (hasGh)
-    scala.sys.process.Process(Seq("gh", "pr", "create", "--base", "main", "--head", branch, "--title", title,
-      "--body", s"Merging publishes $title: tag and fat jar on GitHub releases.")).!
-  else {
-    val repo = git("remote", "get-url", "origin").replaceFirst("^git@github.com:", "https://github.com/").stripSuffix(".git")
-    st.log.info(s"open the release PR: $repo/compare/main...$branch?expand=1")
-  }
-  st
-}
-
-lazy val releaseFlow: Seq[ReleaseStep] = {
-  import sbtrelease.ReleaseStateTransformations._
-  Seq[ReleaseStep](
-    onDevelop,
-    checkSnapshotDependencies,
-    inquireVersions,
-    runClean,
-    runTest,
-    setReleaseVersion,
-    commitReleaseVersion,
-    branchRelease,
-    setNextVersion,
-    commitNextVersion,
-    pushAndOpenPr
-  )
-}
