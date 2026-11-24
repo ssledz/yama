@@ -173,7 +173,13 @@ lazy val components: Seq[Project] = Seq(
 lazy val cli = base("cli")
   .dependsOn(components.map(p => p: ClasspathDep[ProjectReference]) *)
   .settings(
-    libraryDependencies ++= Seq(D.declineEffect, D.http4sEmber, D.log4catsSlf4j, D.logback)
+    libraryDependencies ++= Seq(D.declineEffect, D.http4sEmber, D.log4catsSlf4j, D.logback),
+    // the version from version.sbt, for `yama --version` and the banner
+    Compile / resourceGenerators += Def.task {
+      val out = (Compile / resourceManaged).value / "yama" / "version"
+      IO.write(out, version.value)
+      Seq(out)
+    }.taskValue
   )
 
 // ---------------------------------------------------------------------------

@@ -1,14 +1,21 @@
 name: release
 
-# Releases happen only by merging a pull request into main (normally release/vX.Y.Z, opened by `sbt release` on
-# develop). On merge: if version.sbt holds a non-snapshot version that has no tag yet, build the executable fat jar,
-# tag the merge commit vX.Y.Z and publish a GitHub release with the jar attached as `yama`. Any other merge into main
-# (version unchanged, already released, or a snapshot) does nothing.
+# Two ways to publish the executable fat jar (`yama`) as a GitHub release:
+#
+#   Merging a PR into main (normally release/vX.Y.Z, opened by `sbt release` on develop):
+#     version.sbt holds X.Y.Z and vX.Y.Z is not tagged yet -> tag the merge commit vX.Y.Z, publish the release.
+#     Anything else (a snapshot, an already tagged version) publishes nothing.
+#
+#   By hand (Actions -> release -> Run workflow, pick the branch):
+#     main    -> the same as a merge: release X.Y.Z, refused if it is a snapshot or already tagged.
+#     develop -> a pre-release of the snapshot, e.g. v0.2.0-SNAPSHOT at the current develop commit. Running it again
+#                replaces it, so there is one pre-release per snapshot version, always the latest build.
 
 on:
   pull_request:
     types: [closed]
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,50 +26,79 @@ concurrency:
 
 jobs:
   release:
-    if: github.event.pull_request.merged == true
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     env:
-      SHA: ${{ github.event.pull_request.merge_commit_sha }}
+      SHA: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
           fetch-depth: 0 # tags
 
-      - name: Version to release?
-        id: version
+      - name: What to release?
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BRANCH: ${{ github.ref_name }}
         run: |
           version=$(sed -nE 's/.*version := "([^"]+)".*/\1/p' version.sbt)
-          echo "version.sbt: $version"
-          if [[ "$version" == *-SNAPSHOT ]]; then
-            echo "snapshot: nothing to release"; echo "release=false" >> "$GITHUB_OUTPUT"
-          elif git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
-            echo "v$version is already released"; echo "release=false" >> "$GITHUB_OUTPUT"
+          tagged() { git rev-parse -q --verify "refs/tags/v$version" >/dev/null; }
+          skip() { echo "$1"; echo "mode=skip" >> "$GITHUB_OUTPUT"; exit 0; }
+          fail() { echo "::error::$1"; exit 1; }
+          echo "event: $EVENT, branch: $BRANCH, version.sbt: $version"
+          if [[ "$EVENT" == pull_request ]]; then
+            [[ "$version" == *-SNAPSHOT ]] && skip "snapshot on main: nothing to release"
+            tagged && skip "v$version is already released"
+            mode=release
+          elif [[ "$BRANCH" == main ]]; then
+            [[ "$version" == *-SNAPSHOT ]] && fail "main holds a snapshot ($version): merge a release PR first"
+            tagged && fail "v$version is already released: bump the version with sbt release on develop"
+            mode=release
+          elif [[ "$BRANCH" == develop ]]; then
+            [[ "$version" == *-SNAPSHOT ]] || fail "develop holds $version: expected a -SNAPSHOT version"
+            mode=prerelease
           else
-            echo "release=true" >> "$GITHUB_OUTPUT"; echo "tag=v$version" >> "$GITHUB_OUTPUT"
+            fail "release from main or develop, not $BRANCH"
           fi
+          { echo "mode=$mode"; echo "version=$version"; echo "tag=v$version"; } >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v4
-        if: steps.version.outputs.release == 'true'
+        if: steps.plan.outputs.mode != 'skip'
         with:
           distribution: temurin
           java-version: "21"
           cache: sbt
 
       - uses: sbt/setup-sbt@v1
-        if: steps.version.outputs.release == 'true'
+        if: steps.plan.outputs.mode != 'skip'
 
       - name: Build the fat jar
-        if: steps.version.outputs.release == 'true'
+        if: steps.plan.outputs.mode != 'skip'
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
         run: |
           sbt yama-cli/assembly
           cp projects/yama-cli/target/scala-3.*/yama.jar yama
           chmod +x yama
-          ./yama --help > /dev/null   # the launcher script in front of the jar works
+          ./yama --version | tee /dev/stderr | grep -qx "$VERSION"   # the launcher works and the version is baked in
 
-      - name: Tag and publish ${{ steps.version.outputs.tag }}
-        if: steps.version.outputs.release == 'true'
+      - name: Publish ${{ steps.plan.outputs.tag }}
+        if: steps.plan.outputs.mode == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.version.outputs.tag }}
+          TAG: ${{ steps.plan.outputs.tag }}
         run: gh release create "$TAG" yama --target "$SHA" --title "yama ${TAG#v}" --generate-notes
+
+      - name: Publish pre-release ${{ steps.plan.outputs.tag }}
+        if: steps.plan.outputs.mode == 'prerelease'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          # one pre-release per snapshot version: replace the previous build (and move its tag)
+          gh release delete "$TAG" --cleanup-tag --yes 2>/dev/null || true
+          git push --delete origin "$TAG" 2>/dev/null || true
+          gh release create "$TAG" yama --target "$SHA" --prerelease --latest=false \
+            --title "yama ${TAG#v} (${SHA::7})" \
+            --notes "Development build of develop at $SHA. Replaced by every manual release run on develop."

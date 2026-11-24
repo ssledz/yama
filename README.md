@@ -227,6 +227,15 @@ publishes a GitHub release with the jar attached as `yama`. A merge into `main` 
 or already tagged releases nothing. Pick versions explicitly with
 `sbt "release release-version 1.0.0 next-version 1.1.0-SNAPSHOT"`.
 
+By hand: Actions → **release** → *Run workflow*, picking the branch.
+
+| branch | publishes |
+|---|---|
+| `main` | `vX.Y.Z` from `version.sbt`, like a merge; refused if it is a snapshot or already tagged |
+| `develop` | a pre-release `vX.Y.Z-SNAPSHOT` of the current commit; each run replaces the previous one |
+
+The version is baked into the jar: `yama --version`, and the banner shows it.
+
 ## Credits
 
 `mcp/files-mcp` is a sandboxed filesystem MCP server written in TypeScript by
