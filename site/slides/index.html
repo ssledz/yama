@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Who Owns the Control Flow?</title>
+    <meta name="description" content="Building AI agents from scratch in Scala 3 and Cats Effect. Art of Scala 2026, Warsaw.">
+
+    <link rel="stylesheet" href="vendor/reveal.js/dist/reset.css">
+    <link rel="stylesheet" href="vendor/reveal.js/dist/reveal.css">
+    <link rel="stylesheet" href="vendor/reveal.js/dist/theme/black.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="css/deck.css">
+    <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<div class="reveal">
+
+    <!-- shared gradient used by the divider circle motif -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+        <linearGradient id="evoGrad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#7442c8"/>
+            <stop offset="1" stop-color="#5ae1ff"/>
+        </linearGradient>
+    </defs></svg>
+
+    <div class="logo-eng"><img src="../assets/img/evo-engineering-logo.svg" alt="Evolution Engineering" style="width:100%;display:block"></div>
+
+    <div class="slides">
+
+<!-- ============================================================
+     0 · TITLE
+     ============================================================ -->
+<section data-hexbg>
+    <p class="kicker">Art of Scala · Warsaw · 3 Dec 2026</p>
+    <h1>Who Owns the<br><span class="grad-text">Control Flow?</span></h1>
+    <h3 class="subtitle">Building LLM Agents in Scala 3</h3>
+    <p class="lead">
+        An agent built from scratch with Cats Effect: an LLM, a loop, native tools, MCP, skills, a subagent,
+        and the guardrails that stop it from burning your budget.
+    </p>
+    <div class="meta-line">
+        <span><b>Speaker</b> <span class="name">Sławomir Śledź</span></span>
+        <span><b>Code</b> github.com/ssledz/yama</span>
+    </div>
+    <div class="qr"><div class="qr-code" data-qr="https://ssledz.github.io/yama/"></div>ssledz.github.io/yama</div>
+    <aside class="notes">
+        Claude Code, Cursor, Copilot agents: under the buzzwords they are the same few hundred lines of code.
+        We'll look at one, written in Scala 3. QR for people who want to follow along.
+    </aside>
+</section>
+
+<!-- ============================================================
+     1 · HOOK: DEMO FIRST
+     ============================================================ -->
+<section>
+    <section>
+        <p class="kicker">Live demo first · Yet Another Micro Agent</p>
+        <h2>Meet <span class="grad-text">yama</span></h2>
+        <pre class="codebox code term"><span class="dim">$</span> mkdir demo &amp;&amp; cd demo &amp;&amp; ./yama
+<span class="prompt">yama&gt;</span> research what Art of Scala 2026 is about and save a short summary as aos.md
+<b>◆ round 1/25</b>  <span class="dim">→ POST /responses  input=1 items  tools=8   ← tokens: 1830 in / 41 out</span>
+<span class="ok">🔌 agent</span> <b>research_agent</b> <span class="dim">{"input":"What is Art of Scala 2026 about?"}</span>
+<span class="dim">│</span> <span class="hl">[research_agent]</span> <b>◆ round 1/8</b>
+<span class="dim">│</span> <span class="hl">[research_agent]</span> <span class="ok">🔌 mcp:tavily</span> <b>tavily_search</b> <span class="dim">{"query":"Art of Scala 2026 Warsaw"}</span>
+<span class="dim">│</span> <span class="hl">[research_agent]</span> <b>◆ round 2/8</b> <span class="ok">🔌 mcp:tavily</span> <b>tavily_extract</b> <span class="dim">…</span>
+<span class="dim">│</span> <span class="hl">[research_agent]</span> <b>ANSWER</b> <span class="dim">Art of Scala is a Scala conference …</span>
+<b>◆ round 2/25</b>  <span class="ok">🔌 skill</span> <b>activate_skill</b> <span class="dim">{"name":"markdown-summary"}</span>
+<b>◆ round 3/25</b>  <span class="ok">🔌 mcp:files</span> <b>fs_write</b> <span class="dim">{"path":"demo/aos.md", …}</span>
+<b>◆ round 4/25</b>  <b>ANSWER</b> Saved a short summary to demo/aos.md</pre>
+        <p class="ask">How many lines of code is this? <span class="grad-text">Where is the AI?</span></p>
+        <p class="go-deeper"><span class="key">&#8595;</span> backup instruction &amp; fallback</p>
+        <aside class="notes">
+            Run the released binary in an empty dir. Point at: model calls with tokens, orchestrator delegating to
+            research_agent, the worker's indented rounds over remote MCP, its answer coming back as a tool result,
+            fs_write over local MCP. cat aos.md. Ask the room, answer comes at the end of the loop slide.
+        </aside>
+    </section>
+    <section>
+        <p class="kicker">Plan B</p>
+        <h2>No Tavily, no subagent, <span class="grad-text">same loop</span></h2>
+        <pre class="codebox code term"><span class="prompt">yama&gt;</span> download https://artofscala.com and save a short summary as aos.md
+
+<b>◆ round 1/25</b>  <span class="str">⚡ native</span> <b>wget</b> <span class="dim">{"url":"https://artofscala.com", …}</span>
+<b>◆ round 2/25</b>  <span class="ok">🔌 mcp:files</span> <b>fs_read</b> <span class="dim">{"path":"&lt;session&gt;/downloads/index.html"}</span>
+<b>◆ round 3/25</b>  <span class="ok">🔌 mcp:files</span> <b>fs_write</b> <span class="dim">{"path":"demo/aos.md", …}</span>
+<b>◆ round 4/25</b>  <b>ANSWER</b> Saved a short summary to demo/aos.md</pre>
+        <p class="note">No network at all? <b>--provider ollama</b> runs the same agent against a local model,
+            and there is a recording.</p>
+    </section>
+</section>
+
+<!-- ============================================================
+     2 · JUST ENOUGH LLM
+     ============================================================ -->
+<section>
+    <p class="kicker">Just enough LLM</p>
+    <h2>An LLM is <span class="grad-text">data + a driver</span></h2>
+    <div class="grid c2">
+        <div class="card">
+            <span class="tag">the data</span>
+            <h3>Parameter file</h3>
+            <p>Billions of numbers: the <b>model</b>. Give it tokens, it returns <b>one probability per
+                vocabulary entry</b> for the next token. Stateless, no code, no loop.</p>
+        </div>
+        <div class="card">
+            <span class="tag">the driver</span>
+            <h3>A small program</h3>
+            <p>Turns the phrase into tokens, feeds them to the model, <b>picks the next token</b>, and loops
+                until it picks the end token.</p>
+        </div>
+    </div>
+    <pre class="codebox code">tokens = <span class="hl">tokenize</span>(phrase)                  <span class="dim">// text → token ids</span>
+<span class="kw">loop</span>:
+  probs = <span class="hl">model</span>(weights, tokens)           <span class="dim">// the data: one probability per vocabulary entry</span>
+  next  = <span class="hl">sample</span>(probs)                    <span class="dim">// temperature, top-p: the only randomness</span>
+  <span class="kw">if</span> next == <b>END</b> or tokens.size &gt;= maxTokens: <span class="kw">stop</span>
+  tokens = tokens :+ next                  <span class="dim">// append and go again</span>
+<span class="kw">return</span> detokenize(new tokens)              <span class="dim">// token ids → text</span></pre>
+    <p class="note"><b>&#8635; one model call is already a loop.</b></p>
+    <p class="go-deeper"><span class="key">&#8594;</span> a chat is an LLM in a loop</p>
+    <aside class="notes">
+        The model is a pure function from tokens to probabilities. The driver is ~500 lines of C in llama2.c.
+        Real drivers keep a KV cache so they don't recompute the prompt each step: a speed-up, same semantics.
+    </aside>
+</section>
+
+<section>
+    <p class="kicker">Just enough LLM</p>
+    <h2>A chat is <span class="grad-text">an LLM in a loop</span></h2>
+    <p class="lead">The model is stateless: no memory, no clock, no hands. The chat app keeps the conversation
+        and <b>resends all of it</b> every turn.</p>
+    <div class="loop">
+        <div class="node goal">You type<small>a user message</small></div>
+        <span class="arrow">&#8594;</span>
+        <div class="node">Append<small>to the conversation</small></div>
+        <span class="arrow">&#8594;</span>
+        <div class="node">Model<small>the whole transcript in</small></div>
+        <span class="arrow">&#8594;</span>
+        <div class="node done">Append the reply<small>and show it</small></div>
+    </div>
+    <p class="note"><b>&#8635; you close the loop</b>: nothing happens until you type again. Only text comes out,
+        even a tool call: a structured block that <b>names</b> a tool, and your code decides whether to run it.</p>
+    <pre class="codebox small">{ "type": "function_call", "call_id": "call_7Qx", "name": "<span class="hl">wget</span>",
+  "arguments": "{\"url\":\"https://artofscala.com\",\"outputPath\":\"session/downloads/index.html\"}" }</pre>
+    <p class="go-deeper"><span class="key">&#8594;</span> an agent is an LLM in a loop</p>
+</section>
+
+<!-- ============================================================
+     3 · AGENT VS NORMAL APP
+     ============================================================ -->
+<section>
+    <section>
+        <p class="kicker">The one-sentence version</p>
+        <h2>An agent is an <span class="grad-text">LLM in a loop</span></h2>
+        <p class="lead">...with tools, where <b>the model chooses the next step</b>. Everything else is
+            engineering around that.</p>
+        <pre class="codebox code"><span class="kw">def</span> agent(task: String): F[String] =
+  <span class="kw">def</span> loop(conversation: Vector[Item]): F[String] =
+    model.send(conversation).flatMap { reply =&gt;              <span class="dim">// one stateless call</span>
+      <span class="kw">if</span> reply.toolCalls.isEmpty <span class="kw">then</span> reply.text.pure      <span class="dim">// no tool call: done</span>
+      <span class="kw">else</span> reply.toolCalls.parTraverse(<span class="hl">runTool</span>)          <span class="dim">// your code, not the model's</span>
+        .flatMap(results =&gt; loop(conversation ++ reply.output ++ results))
+    }
+  loop(Vector(Item.User(task)))                             <span class="dim">// the entire state</span></pre>
+        <p class="go-deeper"><span class="key">&#8595;</span> three loops, normal app vs agent</p>
+    </section>
+
+    <section>
+        <p class="kicker">The title, answered</p>
+        <h2>Three loops, <span class="grad-text">three owners</span></h2>
+        <div class="nest outer">
+            <div class="nest-head"><span class="nest-name">Chat loop</span><span class="nest-where">REPL · query after query</span>
+                <span class="nest-owner">owner: <b>you</b></span></div>
+            <p class="nest-stop">memory: <code>Ref[F, Vector[Item]]</code> · stops when you stop typing</p>
+            <div class="nest middle">
+                <div class="nest-head"><span class="nest-name">Agent loop</span><span class="nest-where">Loop.run · round after round</span>
+                    <span class="nest-owner">owner: <b class="grad-text">the model</b></span></div>
+                <p class="nest-stop">stops on <b>no tool calls</b> → <code>Answer.Final</code>, or <b>round &gt; maxRounds</b> → <code>Answer.GaveUp</code></p>
+                <div class="nest inner">
+                    <div class="nest-head"><span class="nest-name">Token loop</span><span class="nest-where">chat.send · inside the provider</span>
+                        <span class="nest-owner">owner: <b>the sampler</b></span></div>
+                    <p class="nest-stop">one stateless function, token after token · stops on a stop token</p>
+                </div>
+            </div>
+        </div>
+        <p class="note">A chat is an LLM in a loop. An agent is the same loop where <b>tool results, not you,
+            feed the next round</b>. The chat loop doesn't go away: the agent loop runs inside each turn.</p>
+        <p class="go-deeper"><span class="key">&#8595;</span> normal app vs agent</p>
+        <aside class="notes">
+            Outer loop: the human decides what happens next. Middle loop: the model decides, by asking for tools
+            or not. Inner loop: the sampler picks tokens. Everything in the rest of the talk lives in the middle
+            loop.
+        </aside>
+    </section>
+
+    <section>
+        <p class="kicker">Who owns the control flow?</p>
+        <h2>Normal app <span class="grad-text">vs agent</span></h2>
+        <table class="compact">
+            <tr><th>&nbsp;</th><th>Normal app</th><th>Agent</th></tr>
+            <tr><td><b>Control flow</b></td><td>written by you, at compile time</td><td>chosen by the model, at runtime</td></tr>
+            <tr><td><b>Determinism</b></td><td>same input → same output</td><td>same input → different paths</td></tr>
+            <tr><td><b>State</b></td><td>your domain model, DB</td><td>an ever-growing conversation, <code>Vector[Item]</code></td></tr>
+            <tr><td><b>Interface out</b></td><td>typed API calls</td><td>natural-language tool descriptions: <b>the description is the prompt</b></td></tr>
+            <tr><td><b>Errors</b></td><td>exceptions, handled by code</td><td>fed back as data, so the model recovers</td></tr>
+            <tr><td><b>Termination</b></td><td>guaranteed by design</td><td>needs a budget: <code>maxRounds</code>, tokens, time</td></tr>
+            <tr><td><b>Cost model</b></td><td>CPU per request</td><td>tokens × rounds (the transcript is resent every round)</td></tr>
+            <tr><td><b>Trust boundary</b></td><td>user input</td><td>user input <b>and every tool result</b> (prompt injection)</td></tr>
+        </table>
+        <p class="go-deeper"><span class="key">&#8595;</span> agent or pipeline?</p>
+    </section>
+
+    <section>
+        <p class="kicker">Before you build one</p>
+        <h2>Agent or <span class="grad-text">pipeline?</span></h2>
+        <table class="compact">
+            <tr><th>&nbsp;</th><th>Control flow decided by</th><th>Example</th></tr>
+            <tr><td><b>Pipeline</b></td><td>you, at coding time</td><td>download → parse → summarise</td></tr>
+            <tr><td><b>Agent</b></td><td>the model, at runtime</td><td>"fix the failing test" → greps, reads, edits, runs, rereads</td></tr>
+        </table>
+        <p class="note">If you can <b>enumerate the steps in advance, write the pipeline.</b> "Summarise 10k
+            documents" is a <code>for</code> loop, not an agent.</p>
+        <p class="note">Claude Code, Cursor, opencode, Copilot agent mode: <b>the same loop</b>, with better tools
+            and better prompts.</p>
+        <p class="go-deeper"><span class="key">&#8594;</span> building blocks in Scala 3 + Cats Effect</p>
+    </section>
+</section>
+
+<!-- ============================================================
+     4 · BUILDING BLOCKS
+     ============================================================ -->
+<section data-motif>
+    <div class="part-no">04</div>
+    <h2>Building blocks in <span class="grad-text">Scala 3 + Cats Effect</span></h2>
+    <p class="lead">Every slide from here is real code from the repo. Read <code>F[_]</code> as "some effect,
+        e.g. <code>IO</code>": the context bounds say what the code needs from it.</p>
+</section>
+
+<!-- 4.0 workspace -->
+<section>
+    <p class="kicker">workspace · Polylith on sbt</p>
+    <h2>An agent is a few <span class="grad-text">small, swappable bricks</span></h2>
+    <div class="split">
+        <pre class="codebox code">yama/
+├── <span class="hl">components/</span>           <span class="dim">12 bricks</span>
+│   ├── conversation      <span class="dim">enum Item</span>
+│   ├── chat              <span class="dim">Chat[F]: the only LLM API</span>
+│   ├── chat-openai-compat
+│   ├── tool · wget
+│   ├── mcp-client · mcp-tools
+│   ├── skills · subagent
+│   ├── <b>agent</b>             <span class="dim">the loop</span>
+│   └── config · log
+├── <span class="hl">bases/</span>cli             <span class="dim">REPL, the only IO</span>
+├── <span class="hl">projects/</span>yama-cli     <span class="dim">no code → fat jar</span>
+└── <span class="hl">development/</span>          <span class="dim">all bricks, one IDE</span></pre>
+        <ul class="clean" style="font-size:.42em">
+            <li><b>Interface</b> = package <code>yama.&lt;brick&gt;</code>, implementation =
+                <code>yama.&lt;brick&gt;.internal</code>, <code>private[brick]</code>.</li>
+            <li>Bricks depend on interfaces only. <code>dependsOn</code> in <code>build.sbt</code> is the graph;
+                <code>check-bricks.sh</code> guards it in CI.</li>
+            <li><code>cli</code> is one way to run it. An <b>http</b> or <b>Slack</b> base would reuse the same
+                components unchanged.</li>
+        </ul>
+    </div>
+</section>
+
+<!-- 4.1 domain -->
+<section>
+    <p class="kicker">component · conversation</p>
+    <h2>A conversation is <span class="grad-text">a value</span></h2>
+    <pre class="codebox code"><span class="kw">opaque type</span> ToolName = String
+<span class="kw">opaque type</span> CallId   = String
+
+<span class="dim">/** One entry of the conversation. The whole conversation is the agent's memory. */</span>
+<span class="kw">enum</span> <span class="hl">Item</span>:
+  <span class="kw">case</span> User(text: String)
+  <span class="kw">case</span> Assistant(text: String)
+  <span class="kw">case</span> ToolCall(id: CallId, name: ToolName, args: String)  <span class="dim">// raw JSON, may be invalid</span>
+  <span class="kw">case</span> ToolResult(id: CallId, output: Json)            <span class="dim">// failures too: {"error": ...}</span>
+
+<span class="kw">enum</span> <span class="hl">Answer</span>:
+  <span class="kw">case</span> Final(reply: String, rounds: Int)
+  <span class="kw">case</span> GaveUp(maxRounds: Int)</pre>
+    <p class="note">The provider JSON is messy; our model of it is <b>a small ADT</b>. Memory is
+        <code>Vector[Item]</code>.</p>
+</section>
+
+<!-- 4.2 chat -->
+<section>
+    <section>
+        <p class="kicker">component · chat</p>
+        <h2>The model client is <span class="grad-text">one HTTP call</span></h2>
+        <pre class="codebox code"><span class="dim">/** The only LLM API the agent sees. No URLs, keys, JSON or vendor names. */</span>
+<span class="kw">trait</span> <span class="hl">Chat</span>[F[_]]:
+  <span class="kw">def</span> send(instructions: String, tools: List[ToolSpec], conversation: Vector[Item]): F[Reply]</pre>
+        <pre class="codebox code"><span class="dim">// component · chat-openai-compat: POST {baseUrl}/responses, stateless, store: false</span>
+<span class="str">"providers"</span>: {
+  <span class="str">"openai"</span>:     { <span class="str">"baseUrl"</span>: "https://api.openai.com/v1",    <span class="str">"apiKeyEnv"</span>: "OPENAI_API_KEY" },
+  <span class="str">"openrouter"</span>: { <span class="str">"baseUrl"</span>: "https://openrouter.ai/api/v1", <span class="str">"apiKeyEnv"</span>: "OPENROUTER_API_KEY" },
+  <span class="str">"deepseek"</span>:   { <span class="str">"baseUrl"</span>: "https://api.deepseek.com",     <span class="str">"apiKeyEnv"</span>: "DEEPSEEK_API_KEY" },
+  <span class="str">"ollama"</span>:     { <span class="str">"baseUrl"</span>: "http://localhost:11434/v1",    <span class="str">"apiKeyEnv"</span>: "OLLAMA_API_KEY" }
+}</pre>
+        <p class="note">One implementation, four providers: they all speak the OpenAI <b>Responses API</b>.
+            A provider is <b>data</b>. The only brick that knows the vendor.</p>
+        <p class="go-deeper"><span class="key">&#8595;</span> switch provider live</p>
+    </section>
+    <section>
+        <p class="kicker">Live moment</p>
+        <h2>Same agent, <span class="grad-text">different model</span></h2>
+        <pre class="codebox code term"><span class="dim">$</span> ./yama --provider openrouter --model anthropic/claude-sonnet-4.5
+
+<span class="prompt">yama&gt;</span> download https://artofscala.com and save a short summary as aos.md</pre>
+        <ul class="clean" style="font-size:.46em">
+            <li>The agent code doesn't change. Neither does the loop.</li>
+            <li>A native non-OpenAI API (say Anthropic Messages) would be a <b>second component behind the same
+                <code>Chat[F]</code></b>, and a project picks which one to ship.</li>
+            <li>429 and 5xx are retried <b>outside</b> the loop: <code>Chat.retrying</code> (cats-retry), backoff +
+                jitter, honouring <code>Retry-After</code>. The loop never knows.</li>
+        </ul>
+    </section>
+</section>
+
+<!-- 4.3 tool -->
+<section>
+    <p class="kicker">component · tool</p>
+    <h2>A tool = <span class="grad-text">schema + handler</span></h2>
+    <pre class="codebox code"><span class="kw">trait</span> <span class="hl">Tool</span>[F[_]]:
+  <span class="kw">def</span> name: ToolName
+  <span class="kw">def</span> description: String      <span class="dim">// the description IS the prompt</span>
+  <span class="kw">def</span> schema: Json             <span class="dim">// JSON Schema of the arguments</span>
+  <span class="kw">def</span> run(args: Json): F[Json]</pre>
+    <pre class="codebox code"><span class="dim">// component · wget: the schema is derived from the case class, at compile time (Mirror)</span>
+<span class="kw">final case class</span> WgetArgs(url: String, outputPath: String) <span class="kw">derives</span> <span class="hl">ToolSchema</span>, Decoder
+
+<span class="dim">// {"type":"object","properties":{"url":{"type":"string"},"outputPath":{"type":"string"}},</span>
+<span class="dim">//  "required":["url","outputPath"],"additionalProperties":false}</span></pre>
+    <p class="note">The schema constrains <b>shape</b> only. The handler re-validates: <code>outputPath</code>
+        must stay inside the sandbox.</p>
+</section>
+
+<!-- 4.4 failures are data -->
+<section>
+    <p class="kicker">component · tool</p>
+    <h2>Failures are <span class="grad-text">data</span></h2>
+    <pre class="codebox code"><span class="kw">def</span> execute(call: Item.ToolCall): F[Item.ToolResult] =
+  <span class="kw">val</span> output = byName.get(call.name) <span class="kw">match</span>
+    <span class="kw">case</span> None =&gt; Tool.error(s"Unknown tool: ${call.name.value}").pure[F]
+    <span class="kw">case</span> Some(tool) =&gt;
+      parse(call.args) <span class="kw">match</span>
+        <span class="kw">case</span> Left(failure) =&gt; Tool.error(s"Invalid JSON: ${failure.message}").pure[F]
+        <span class="kw">case</span> Right(args)   =&gt; tool.run(args).<span class="hl">handleError</span>(e =&gt; Tool.error(e.getMessage))
+  output.map(Item.ToolResult(call.id, _))</pre>
+    <ul class="clean" style="font-size:.44em">
+        <li>Unknown tool, bad JSON, a failed <code>F</code>: all become <code>{"error": ...}</code> and go back to
+            the model, which <b>recovers</b>. A failure never escapes the loop.</li>
+        <li>Tool calls of one round run in parallel: <code>calls.<span class="grad-text">parTraverse</span>(execute)</code>.
+            One word in Cats Effect.</li>
+    </ul>
+</section>
+
+<!-- 4.5 the loop -->
+<section>
+    <p class="kicker">component · agent · Loop.scala</p>
+    <h2>This is <span class="grad-text">all the AI there is</span></h2>
+    <pre class="codebox code"><span class="dim">// final class Loop[F[_]: Concurrent: Parallel](chat, tools, ...):</span>
+  <span class="kw">def</span> <span class="hl">run</span>(conversation: Vector[Item], round: Int): F[(Vector[Item], Answer)] =
+    <span class="kw">if</span> round &gt; maxRounds <span class="kw">then</span> (conversation, Answer.<span class="hl">GaveUp</span>(maxRounds)).pure[F]
+    <span class="kw">else</span>
+      <span class="kw">for</span>
+        reply  &lt;- chat.send(instructions, specs, conversation)
+        next    = conversation ++ reply.output
+        result &lt;-
+          <span class="kw">if</span> reply.toolCalls.isEmpty <span class="kw">then</span>
+            (next, Answer.<span class="hl">Final</span>(reply.text.getOrElse(""), round)).pure[F]
+          <span class="kw">else</span>
+            reply.toolCalls.parTraverse(execute)
+              .flatMap(results =&gt; <span class="hl">run</span>(next ++ results, round + 1))
+      <span class="kw">yield</span> result</pre>
+    <p class="note">Recursion through <code>flatMap</code>: stack-safe, no <code>@tailrec</code>. Giving up is
+        <b>a value</b>. Memory is a <code>Ref[F, Vector[Item]]</code>, resent every round. <b>45 lines.</b></p>
+</section>
+
+<!-- 4.6 MCP -->
+<section>
+    <section>
+        <p class="kicker">component · mcp-client</p>
+        <h2>MCP: <span class="grad-text">tools in another process</span></h2>
+        <div class="loop">
+            <div class="node goal">yama<small>Scala 3 · MCP Java SDK</small></div>
+            <span class="arrow">&#8644;</span>
+            <div class="node">JSON-RPC 2.0<small>stdio or streamable HTTP</small></div>
+            <span class="arrow">&#8644;</span>
+            <div class="node done">files-mcp<small>TypeScript · local</small></div>
+            <div class="node done">Tavily<small>remote · Bearer</small></div>
+        </div>
+        <pre class="codebox small"><span class="hl">→</span> {"jsonrpc":"2.0","id":1,"method":"<b>initialize</b>","params":{"clientInfo":{"name":"yama"},...}}
+<span class="hl">→</span> {"jsonrpc":"2.0","id":2,"method":"<b>tools/list</b>"}
+<span class="dim">←</span> {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"fs_read","inputSchema":{...}},...]}}
+<span class="hl">→</span> {"jsonrpc":"2.0","id":3,"method":"<b>tools/call</b>","params":{"name":"fs_write","arguments":{...}}}</pre>
+        <p class="note">The server is TypeScript, the client is Scala, and <b>neither cares</b>: MCP is the
+            contract. Write once, plug into Claude Code, Cursor or your agent. M×N adapters become M+N.</p>
+        <p class="go-deeper"><span class="key">&#8595;</span> the Cats Effect wrapper</p>
+    </section>
+    <section>
+        <p class="kicker">component · mcp-client</p>
+        <h2>A thin wrapper, <span class="grad-text">bridging both ways</span></h2>
+        <pre class="codebox code"><span class="kw">trait</span> <span class="hl">McpClient</span>[F[_]]:
+  <span class="kw">def</span> server: String
+  <span class="kw">def</span> listTools: F[List[McpTool]]
+  <span class="kw">def</span> callTool(name: String, args: Json): F[Json]     <span class="dim">// circe only: no Jackson leaks out</span>
+
+<span class="kw">def</span> connect[F[_]: Async: Processes: LoggerFactory](server: McpServer): <span class="hl">Resource</span>[F, McpClient[F]]
+
+<span class="dim">// Mono → F   (we call the SDK)</span>
+Async[F].fromCompletableFuture(Sync[F].delay(mono.toFuture))
+<span class="dim">// F → Mono   (the SDK calls us back, through a CE Dispatcher)</span>
+Mono.fromFuture(() =&gt; dispatcher.unsafeToCompletableFuture(fa))</pre>
+        <ul class="clean" style="font-size:.4em">
+            <li>Local servers are spawned with the <b>fs2 process API</b>: nested <code>Resource</code>s,
+                <code>initialize</code> on acquire, kill on release. No leaked child processes.</li>
+            <li>A <b>supervisor</b> respawns a crashed server (exponential backoff, gives up after 5 quick crashes).</li>
+        </ul>
+    </section>
+    <section>
+        <p class="kicker">component · mcp-tools · 18 lines</p>
+        <h2>The model <span class="grad-text">can't tell native from MCP</span></h2>
+        <pre class="codebox code"><span class="kw">def</span> from[F[_]: Functor](client: McpClient[F]): F[List[Tool[F]]] =
+  client.listTools.map(_.map { mcp =&gt;
+    Tool[F](
+      name        = mcp.name,
+      description = mcp.description,
+      schema      = mcp.inputSchema,
+      origin      = s"mcp:${client.server}"
+    )(args =&gt; client.<span class="hl">callTool</span>(mcp.name, args))
+  })</pre>
+        <p class="note">Every remote tool adapted to the same <code>Tool[F]</code> trait. The loop doesn't change.</p>
+    </section>
+</section>
+
+<!-- 4.7 skills -->
+<section>
+    <p class="kicker">component · skills · agentskills.io</p>
+    <h2>Skills: <span class="grad-text">prompts loaded on demand</span></h2>
+    <div class="grid c3">
+        <div class="card">
+            <span class="tag">tier 1 · startup</span>
+            <h3>Catalog</h3>
+            <p>Name + description of every skill, ~50–100 tokens each, in the system prompt.</p>
+        </div>
+        <div class="card">
+            <span class="tag">tier 2 · activate_skill</span>
+            <h3>Body</h3>
+            <p>The <code>SKILL.md</code> instructions, loaded when the model asks for them.</p>
+        </div>
+        <div class="card">
+            <span class="tag">tier 3 · read_skill_resource</span>
+            <h3>Resources</h3>
+            <p><code>references/</code>, <code>assets/</code>: read only when the body points at them.</p>
+        </div>
+    </div>
+    <pre class="codebox small">---
+name: <span class="hl">markdown-summary</span>
+description: Output-format rules for writing a summary, notes or a report as a markdown file. Use whenever ...
+---
+# Writing a markdown summary
+1. Start with a single `#` title that names the subject, not the task ...</pre>
+    <p class="note">A skill is <b>just a prompt behind a tool</b>. It plugs in through the same <code>Tool[F]</code>;
+        <code>agent</code> doesn't change at all. Built-in skills ship inside the jar.</p>
+</section>
+
+<!-- 4.8 subagent -->
+<section>
+    <p class="kicker">component · subagent</p>
+    <h2>Agents as tools: <span class="grad-text">orchestrator–worker</span></h2>
+    <pre class="codebox code"><span class="kw">def</span> asTool[F[_]: MonadThrow](spec: SubAgentSpec, makeAgent: F[Agent[F]]): Tool[F] =
+  Tool[F](
+    name        = spec.name,                <span class="dim">// "research_agent"</span>
+    description = spec.description,         <span class="dim">// when to delegate: it's the prompt</span>
+    schema      = ToolSchema[SubAgentInput] <span class="dim">// SubAgentInput(input: String)</span>
+  ) { args =&gt;
+    <span class="kw">for</span>
+      in     &lt;- args.as[SubAgentInput].liftTo[F]
+      agent  &lt;- <span class="hl">makeAgent</span>               <span class="dim">// fresh conversation per call</span>
+      answer &lt;- agent.<span class="hl">query</span>(in.input)   <span class="dim">// the worker's own loop</span>
+    <span class="kw">yield</span> answer <span class="kw">match</span>
+      <span class="kw">case</span> Answer.Final(text, _) =&gt; Json.obj("answer" -&gt; text.asJson)
+      <span class="kw">case</span> gaveUp: Answer.GaveUp =&gt; Tool.error(s"${spec.name}: ${gaveUp.text}")
+  }</pre>
+    <ul class="clean" style="font-size:.4em">
+        <li><b>Context isolation:</b> raw search pages stay in the worker; only the condensed answer comes back.</li>
+        <li>The orchestrator <b>can't</b> search, it can only delegate. No new concepts: a loop calling a tool that is
+            itself a loop.</li>
+    </ul>
+</section>
+
+<!-- 4.9 guardrails -->
+<section>
+    <p class="kicker">Guardrails</p>
+    <h2>Least privilege <span class="grad-text">at the connection, not in the prompt</span></h2>
+    <div class="grid c2">
+        <div class="card">
+            <span class="tag">budget</span>
+            <h3>Termination is your job</h3>
+            <p><code>maxRounds</code> per agent: 25 for the orchestrator, 8 for the worker.</p>
+            <p>Depth = 1: workers never get subagent tools.</p>
+        </div>
+        <div class="card">
+            <span class="tag">sandbox</span>
+            <h3>Two mounts, nothing else</h3>
+            <p>The workspace and a per-run session folder go to <code>files-mcp</code> as <code>FS_ROOTS</code>;
+                <code>wget</code> gets the same list.</p>
+        </div>
+        <div class="card">
+            <span class="tag">tools per agent</span>
+            <h3>Pick servers, not words</h3>
+            <p><code>agent.mcpServers: ["files"]</code>: Tavily is reachable only through
+                <code>research_agent</code>.</p>
+        </div>
+        <div class="card">
+            <span class="tag">untrusted output</span>
+            <h3>Every tool result is input</h3>
+            <p>A downloaded page saying "ignore previous instructions…" is <b>prompt injection</b>. Mitigation is
+                tool design and the sandbox, not prompt wording.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     6 · WRAP-UP
+     ============================================================ -->
+<section data-hexbg>
+    <p class="kicker">Wrap-up</p>
+    <h2>Three <span class="grad-text">takeaways</span></h2>
+    <div class="split" style="grid-template-columns: 1fr auto; gap: 2rem">
+        <div>
+            <ol class="takeaways">
+                <li>An agent is <b>a loop where the model picks the next step</b>. You own everything else.</li>
+                <li>Tools are the interface, and <b>the description is the prompt</b>. MCP makes tools reusable,
+                    skills make prompts reusable.</li>
+                <li>Build an agent when the steps <b>can't be enumerated</b>. Otherwise write the pipeline.</li>
+            </ol>
+            <p class="note">Production: cost is <b>transcript × rounds</b> (so caching matters), log every round.
+                Sub-agents, planning, compaction: <b>more prompts and more tools around the same loop</b>.</p>
+        </div>
+        <div class="qr big"><div class="qr-code" data-qr="https://ssledz.github.io/yama/"></div>ssledz.github.io/yama</div>
+    </div>
+    <p class="note" style="margin-top:1.4rem">Try it: download <b>yama</b> from GitHub releases,
+        <b>chmod +x yama &amp;&amp; ./yama</b> (JDK 21+, Node for npx). Thank you! Questions?</p>
+</section>
+
+<!-- ============================================================
+     BACKUP
+     ============================================================ -->
+<section>
+    <section data-motif>
+        <div class="part-no">B</div>
+        <h2>Backup <span class="grad-text">slides</span></h2>
+        <p class="lead">For Q&amp;A: how the tool schema is derived from a case class.</p>
+        <p class="go-deeper"><span class="key">&#8595;</span> details</p>
+    </section>
+
+    <section>
+        <span class="backup-badge">backup</span>
+        <h2>ToolSchema: <span class="grad-text">derived with Mirror</span></h2>
+        <pre class="codebox code"><span class="kw">trait</span> ToolSchema[A]:
+  <span class="kw">def</span> json: Json
+  <span class="kw">def</span> optional: Boolean = <span class="kw">false</span>
+
+<span class="kw">object</span> ToolSchema:
+  <span class="kw">given</span> ToolSchema[String] = of(tpe("string"))
+  <span class="kw">given</span> ToolSchema[Int]    = of(tpe("integer"))
+  <span class="kw">given</span> [A: ToolSchema]: ToolSchema[Option[A]] = ...   <span class="dim">// not required</span>
+
+  <span class="dim">/** Field names and field types come from the case class Mirror, at compile time. */</span>
+  <span class="kw">inline def</span> <span class="hl">derived</span>[A](<span class="kw">using</span> m: Mirror.ProductOf[A]): ToolSchema[A] =
+    <span class="kw">val</span> names  = <span class="hl">constValueTuple</span>[m.MirroredElemLabels].toList.map(_.toString)
+    <span class="kw">val</span> fields = <span class="hl">summonAll</span>[Tuple.Map[m.MirroredElemTypes, ToolSchema]].toList
+    objectSchema(names.zip(fields))     <span class="dim">// object, properties, required</span></pre>
+        <p class="note">Versus the hand-written JS schema: the case class is the single source of truth for the
+            schema <b>and</b> the decoder.</p>
+    </section>
+
+</section>
+
+    </div>
+</div>
+
+<div class="deck-footer">Art of Scala 2026 &nbsp;·&nbsp; <b>Who Owns the Control Flow?</b></div>
+
+<!-- hex background for the title and wrap-up slides, and the circle motif for dividers -->
+<template id="hexbg-tpl">
+<svg class="hexbg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+<g class="drift-a">
+<path d="M 1933.0 52.0 L 1839.0 214.8 L 1651.0 214.8 L 1557.0 52.0 L 1651.0 -110.8 L 1839.0 -110.8 Z" fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="1.5"/>
+<path d="M 1700.0 360.0 L 1650.0 446.6 L 1550.0 446.6 L 1500.0 360.0 L 1550.0 273.4 L 1650.0 273.4 Z" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.5"/>
+<path d="M 1316.0 180.0 L 1283.0 237.2 L 1217.0 237.2 L 1184.0 180.0 L 1217.0 122.8 L 1283.0 122.8 Z" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="1.5"/>
+<path d="M 1424.0 60.0 L 1407.0 89.4 L 1373.0 89.4 L 1356.0 60.0 L 1373.0 30.6 L 1407.0 30.6 Z" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.5"/>
+<polyline points="620,140 1000,140 1080,60 1356,60" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1316,180 1457,180 1550,273.4" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1650,446.6 1650,560 1750,660" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1651,214.8 1651,300" fill="none" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1500,360 1408,360" fill="none" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="620" cy="140" r="5" fill="#ffffff" fill-opacity="0.30"/>
+<circle cx="1316" cy="180" r="5" fill="#ffffff" fill-opacity="0.30"/>
+<circle cx="1750" cy="660" r="5" fill="#ffffff" fill-opacity="0.30"/>
+<circle cx="1408" cy="360" r="5" fill="#ffffff" fill-opacity="0.30"/>
+<rect x="1076" y="56" width="8" height="8" fill="#ffffff" fill-opacity="0.22"/>
+<rect x="1647" y="296" width="8" height="8" fill="#ffffff" fill-opacity="0.22"/>
+<rect x="1646" y="556" width="8" height="8" fill="#ffffff" fill-opacity="0.22"/>
+<polyline class="sig slow" points="620,140 1000,140 1080,60 1356,60" fill="none" stroke="#5AE1FF" stroke-opacity="0.4" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1380,470 1500,470 1580,550" fill="none" stroke="#5AE1FF" stroke-opacity="0.85" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+<circle class="ring" cx="1380" cy="470" r="16" fill="none" stroke="#5AE1FF" stroke-width="1.5"/>
+<circle class="pulse" cx="1380" cy="470" r="7" fill="#5AE1FF"/>
+</g>
+<g class="drift-b">
+<path d="M 210.0 1020.0 L 125.0 1167.2 L -45.0 1167.2 L -130.0 1020.0 L -45.0 872.8 L 125.0 872.8 Z" fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="1.5"/>
+<path d="M 376.0 940.0 L 353.0 979.8 L 307.0 979.8 L 284.0 940.0 L 307.0 900.2 L 353.0 900.2 Z" fill="none" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1.5"/>
+<polyline points="376,940 560,940 640,860" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="210,1020 210,1080" fill="none" stroke="#ffffff" stroke-opacity="0.09" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="376" cy="940" r="5" fill="#ffffff" fill-opacity="0.30"/>
+<circle cx="640" cy="860" r="5" fill="#ffffff" fill-opacity="0.30"/>
+<polyline class="sig" points="376,940 560,940 640,860" fill="none" stroke="#ab84e8" stroke-opacity="0.5" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+</g>
+<g class="drift-a">
+<path d="M 1958.0 948.0 L 1900.0 1048.5 L 1784.0 1048.5 L 1726.0 948.0 L 1784.0 847.5 L 1900.0 847.5 Z" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.5"/>
+<polyline points="1520,1015 1660,1015 1726,948" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1520" cy="1015" r="5" fill="#ffffff" fill-opacity="0.30"/>
+</g>
+</svg>
+</template>
+<template id="motif-tpl">
+<svg class="evo-motif" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+<circle cx="1560" cy="540" r="330" fill="none" stroke="url(#evoGrad)" stroke-width="2" stroke-opacity=".55"/>
+<circle cx="1560" cy="540" r="230" fill="none" stroke="url(#evoGrad)" stroke-width="1.5" stroke-opacity=".35"/>
+<circle cx="1560" cy="540" r="130" fill="url(#evoGrad)" fill-opacity=".10"/>
+<circle cx="1890" cy="540" r="7" fill="#5ae1ff"/>
+</svg>
+</template>
+
+<script src="vendor/reveal.js/dist/reveal.js"></script>
+<script src="vendor/reveal.js/dist/plugin/notes.js"></script>
+<script src="vendor/reveal.js/dist/plugin/zoom.js"></script>
+<!-- QR codes are drawn in the browser; without network the URL under them is still there -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+    // The hex background and the divider motif are fixed to the viewport, so they are shown only while their
+    // slide is current: one copy each, outside the slides, toggled on slide change.
+    var hexbg = document.getElementById('hexbg-tpl').content.firstElementChild.cloneNode(true);
+    var motif = document.getElementById('motif-tpl').content.firstElementChild.cloneNode(true);
+    var viewport = document.querySelector('.reveal');
+    viewport.insertBefore(hexbg, viewport.firstChild);
+    viewport.insertBefore(motif, viewport.firstChild);
+
+    document.querySelectorAll('[data-qr]').forEach(function (el) {
+        if (typeof qrcode !== 'function') return;
+        var qr = qrcode(0, 'M');
+        qr.addData(el.getAttribute('data-qr'));
+        qr.make();
+        el.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+    });
+
+    Reveal.initialize({
+        controls: true,
+        progress: true,
+        hash: true,
+        center: true,
+        width: 1152,
+        height: 720,
+        margin: 0.07,
+        transition: 'slide',
+        plugins: [RevealNotes, RevealZoom]
+    }).then(function () {
+        var sync = function () {
+            var i = Reveal.getIndices();
+            var slide = Reveal.getCurrentSlide();
+            document.body.classList.toggle('evo-title-slide', i.h === 0 && !i.v);
+            hexbg.style.display = slide.hasAttribute('data-hexbg') ? '' : 'none';
+            motif.style.display = slide.hasAttribute('data-motif') ? '' : 'none';
+        };
+        Reveal.on('slidechanged', sync);
+        sync();
+    });
+</script>
+</body>
+</html>
