@@ -34,7 +34,7 @@ final class Repl[F[_]: Sync: Console](
   )
 
   def run: F[Unit] =
-    help >> console.println(Ansi.dim("try: download https://example.com and save a short summary as example.md")) >> loop
+    help >> console.println(Ansi.dim("try: What is art of scala conference make a short summary and save it in artofscala.md")) >> loop
 
   private def loop: F[Unit] =
     console.print(Ansi.bold(Ansi.blue("\nyama> "))) >>

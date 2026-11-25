@@ -65,7 +65,7 @@ object Wiring:
       mcp     <- Resource.eval(clients.traverse(c => McpTools.from(c).map(c.server -> _)))
       _       <- Resource.eval(mcp.traverse_((name, tools) => log.info(s"✓ MCP server '$name': ${tools.map(_.name.value).mkString(", ")}")))
       wget     = Wget.make[F](client, mounts.roots)
-      builtin <- Resource.eval(Skills.builtinRoot[F])
+      builtin <- Skills.builtinRoot[F]
       extra    = config.skills.paths.map(base.resolve(_).normalize)
       skills  <- Resource.eval(Skills.discover[F](Skills.defaultRoots(project, where.skillsDir, home, extra, config.skills.trustProject, builtin)))
       _       <- Resource.eval(skills.diagnostics.traverse_(d => log.warn(s"skill ${d.location}: ${d.message}${if d.skipped then " (skipped)" else ""}")))
