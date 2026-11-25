@@ -98,42 +98,55 @@
      ============================================================ -->
 <section>
     <p class="kicker">Just enough LLM</p>
-    <h2>An LLM is <span class="grad-text">one function</span></h2>
-    <p class="lead">
-        Text in, a probability for every possible next token out. Scored on every single step.
-    </p>
-    <div class="loop">
-        <div class="node goal">Text in<small>the whole prompt</small></div>
-        <span class="arrow">&#8594;</span>
-        <div class="node">Forward pass<small>matrix multiplies</small></div>
-        <span class="arrow">&#8594;</span>
-        <div class="node">One probability<br>per token<small>softmax over the vocabulary</small></div>
-        <span class="arrow">&#8594;</span>
-        <div class="node done">Sampler picks one<small>append, repeat</small></div>
+    <h2>An LLM is <span class="grad-text">data + a driver</span></h2>
+    <div class="grid c2">
+        <div class="card">
+            <span class="tag">the data</span>
+            <h3>Parameter file</h3>
+            <p>Billions of numbers: the <b>model</b>. Give it tokens, it returns <b>one probability per
+                vocabulary entry</b> for the next token. Stateless, no code, no loop.</p>
+        </div>
+        <div class="card">
+            <span class="tag">the driver</span>
+            <h3>A small program</h3>
+            <p>Turns the phrase into tokens, feeds them to the model, <b>picks the next token</b>, and loops
+                until it picks the end token.</p>
+        </div>
     </div>
-    <p class="note"><b>&#8635; append the token and call it again.</b> Chat, reasoning and coding are that same
-        function in a loop.</p>
+    <pre class="codebox code">tokens = <span class="hl">tokenize</span>(phrase)                  <span class="dim">// text → token ids</span>
+<span class="kw">loop</span>:
+  probs = <span class="hl">model</span>(weights, tokens)           <span class="dim">// the data: one probability per vocabulary entry</span>
+  next  = <span class="hl">sample</span>(probs)                    <span class="dim">// temperature, top-p: the only randomness</span>
+  <span class="kw">if</span> next == <b>END</b> or tokens.size &gt;= maxTokens: <span class="kw">stop</span>
+  tokens = tokens :+ next                  <span class="dim">// append and go again</span>
+<span class="kw">return</span> detokenize(new tokens)              <span class="dim">// token ids → text</span></pre>
+    <p class="note"><b>&#8635; one model call is already a loop.</b></p>
+    <p class="go-deeper"><span class="key">&#8594;</span> a chat is an LLM in a loop</p>
+    <aside class="notes">
+        The model is a pure function from tokens to probabilities. The driver is ~500 lines of C in llama2.c.
+        Real drivers keep a KV cache so they don't recompute the prompt each step: a speed-up, same semantics.
+    </aside>
 </section>
 
 <section>
     <p class="kicker">Just enough LLM</p>
-    <h2>Stateless, and <span class="grad-text">only text comes out</span></h2>
-    <div class="grid c2">
-        <div class="card">
-            <span class="tag">what it can't do</span>
-            <h3>No memory, no clock, no hands</h3>
-            <p>Every call starts from zero: you resend the whole conversation.</p>
-            <p>It can't execute anything. It can only <b>write text</b>.</p>
-        </div>
-        <div class="card">
-            <span class="tag">tool calling</span>
-            <h3>Still just text</h3>
-            <p>The model emits a structured block that <b>names</b> a tool and fills in arguments.</p>
-            <p><b>Your code</b> decides whether to run it.</p>
-        </div>
+    <h2>A chat is <span class="grad-text">an LLM in a loop</span></h2>
+    <p class="lead">The model is stateless: no memory, no clock, no hands. The chat app keeps the conversation
+        and <b>resends all of it</b> every turn.</p>
+    <div class="loop">
+        <div class="node goal">You type<small>a user message</small></div>
+        <span class="arrow">&#8594;</span>
+        <div class="node">Append<small>to the conversation</small></div>
+        <span class="arrow">&#8594;</span>
+        <div class="node">Model<small>the whole transcript in</small></div>
+        <span class="arrow">&#8594;</span>
+        <div class="node done">Append the reply<small>and show it</small></div>
     </div>
+    <p class="note"><b>&#8635; you close the loop</b>: nothing happens until you type again. Only text comes out,
+        even a tool call: a structured block that <b>names</b> a tool, and your code decides whether to run it.</p>
     <pre class="codebox small">{ "type": "function_call", "call_id": "call_7Qx", "name": "<span class="hl">wget</span>",
   "arguments": "{\"url\":\"https://artofscala.com\",\"outputPath\":\"session/downloads/index.html\"}" }</pre>
+    <p class="go-deeper"><span class="key">&#8594;</span> an agent is an LLM in a loop</p>
 </section>
 
 <!-- ============================================================
@@ -153,7 +166,34 @@
         .flatMap(results =&gt; loop(conversation ++ reply.output ++ results))
     }
   loop(Vector(Item.User(task)))                             <span class="dim">// the entire state</span></pre>
-        <p class="go-deeper"><span class="key">&#8595;</span> normal app vs agent</p>
+        <p class="go-deeper"><span class="key">&#8595;</span> three loops, normal app vs agent</p>
+    </section>
+
+    <section>
+        <p class="kicker">The title, answered</p>
+        <h2>Three loops, <span class="grad-text">three owners</span></h2>
+        <div class="nest outer">
+            <div class="nest-head"><span class="nest-name">Chat loop</span><span class="nest-where">REPL · query after query</span>
+                <span class="nest-owner">owner: <b>you</b></span></div>
+            <p class="nest-stop">memory: <code>Ref[F, Vector[Item]]</code> · stops when you stop typing</p>
+            <div class="nest middle">
+                <div class="nest-head"><span class="nest-name">Agent loop</span><span class="nest-where">Loop.run · round after round</span>
+                    <span class="nest-owner">owner: <b class="grad-text">the model</b></span></div>
+                <p class="nest-stop">stops on <b>no tool calls</b> → <code>Answer.Final</code>, or <b>round &gt; maxRounds</b> → <code>Answer.GaveUp</code></p>
+                <div class="nest inner">
+                    <div class="nest-head"><span class="nest-name">Token loop</span><span class="nest-where">chat.send · inside the provider</span>
+                        <span class="nest-owner">owner: <b>the sampler</b></span></div>
+                    <p class="nest-stop">one stateless function, token after token · stops on a stop token</p>
+                </div>
+            </div>
+        </div>
+        <p class="note">A chat is an LLM in a loop. An agent is the same loop where <b>tool results, not you,
+            feed the next round</b>. The chat loop doesn't go away: the agent loop runs inside each turn.</p>
+        <aside class="notes">
+            Outer loop: the human decides what happens next. Middle loop: the model decides, by asking for tools
+            or not. Inner loop: the sampler picks tokens. Everything in the rest of the talk lives in the middle
+            loop.
+        </aside>
     </section>
 
     <section>

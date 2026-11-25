@@ -36,4 +36,14 @@ if $open_browser; then
     fi ) &
 fi
 
-exec python3 -m http.server "$port" --bind 127.0.0.1 --directory "$root"
+# no-store: the browser always fetches the current CSS/JS, so edits show up on a plain reload
+exec python3 - "$port" "$root" <<'PY'
+import functools, http.server, sys
+port, root = int(sys.argv[1]), sys.argv[2]
+class NoCache(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+handler = functools.partial(NoCache, directory=root)
+http.server.ThreadingHTTPServer(("127.0.0.1", port), handler).serve_forever()
+PY

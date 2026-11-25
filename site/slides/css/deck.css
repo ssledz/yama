@@ -690,3 +690,34 @@ body.evo-title-slide .reveal .logo-eng { opacity: 1; }
 .reveal .codebox { scrollbar-color: var(--border) transparent; scrollbar-width: thin; }
 
 .reveal h3.subtitle { font-size: .9em; font-weight: 600; color: var(--muted); margin: -.6rem 0 1.2rem; }
+
+/* three nested loops: chat > agent > token */
+.reveal .nest {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1rem 1.3rem 1.1rem;
+    margin-top: .8rem;
+}
+.reveal .nest.outer { background: rgba(22, 12, 41, .6); }
+.reveal .nest.middle { border: 2px solid rgba(171, 132, 232, .75); background: rgba(116, 66, 200, .16); }
+.reveal .nest.inner { border-color: rgba(90, 225, 255, .45); background: rgba(90, 225, 255, .07); }
+.reveal .nest-head { display: flex; align-items: center; gap: 1rem; font-size: .54em; }
+.reveal .nest-name { font-weight: 700; color: var(--text); white-space: nowrap; }
+.reveal .nest-name::before { content: "\21BB"; margin-right: .45rem; color: var(--amethyst-lt); }
+.reveal .nest.inner > .nest-head .nest-name::before { color: var(--cyan); }
+.reveal .nest-where { font-family: var(--mono); font-size: .7em; color: var(--faint); }
+.reveal .nest-owner {
+    margin-left: auto;
+    white-space: nowrap;
+    font-size: .82em;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: .15em .8em;
+    background: rgba(0, 0, 0, .35);
+}
+.reveal .nest-owner b { color: var(--text); font-weight: 700; }
+.reveal .nest-owner b.grad-text { color: transparent; }
+.reveal .nest.middle > .nest-head .nest-owner { border-color: rgba(171, 132, 232, .75); }
+.reveal .nest-stop { margin: .45rem 0 0 1.75rem; font-size: .4em; line-height: 1.45; color: var(--muted); }
+.reveal .nest-stop b { color: var(--text); font-weight: 600; }
