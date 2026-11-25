@@ -189,6 +189,7 @@
         </div>
         <p class="note">A chat is an LLM in a loop. An agent is the same loop where <b>tool results, not you,
             feed the next round</b>. The chat loop doesn't go away: the agent loop runs inside each turn.</p>
+        <p class="go-deeper"><span class="key">&#8595;</span> normal app vs agent</p>
         <aside class="notes">
             Outer loop: the human decides what happens next. Middle loop: the model decides, by asking for tools
             or not. Inner loop: the sampler picks tokens. Everything in the rest of the talk lives in the middle
@@ -210,6 +211,7 @@
             <tr><td><b>Cost model</b></td><td>CPU per request</td><td>tokens × rounds (the transcript is resent every round)</td></tr>
             <tr><td><b>Trust boundary</b></td><td>user input</td><td>user input <b>and every tool result</b> (prompt injection)</td></tr>
         </table>
+        <p class="go-deeper"><span class="key">&#8595;</span> agent or pipeline?</p>
     </section>
 
     <section>
@@ -224,6 +226,7 @@
             documents" is a <code>for</code> loop, not an agent.</p>
         <p class="note">Claude Code, Cursor, opencode, Copilot agent mode: <b>the same loop</b>, with better tools
             and better prompts.</p>
+        <p class="go-deeper"><span class="key">&#8594;</span> building blocks in Scala 3 + Cats Effect</p>
     </section>
 </section>
 
@@ -557,8 +560,7 @@ description: Output-format rules for writing a summary, notes or a report as a m
     <section data-motif>
         <div class="part-no">B</div>
         <h2>Backup <span class="grad-text">slides</span></h2>
-        <p class="lead">For Q&amp;A: ToolSchema derivation, shipping it, Polylith rules, skills internals,
-            subagent wiring, tests.</p>
+        <p class="lead">For Q&amp;A: how the tool schema is derived from a case class.</p>
         <p class="go-deeper"><span class="key">&#8595;</span> details</p>
     </section>
 
@@ -583,91 +585,6 @@ description: Output-format rules for writing a summary, notes or a report as a m
             schema <b>and</b> the decoder.</p>
     </section>
 
-    <section>
-        <span class="backup-badge">backup</span>
-        <h2>Shipping it: <span class="grad-text">one executable file</span></h2>
-        <ul class="clean" style="font-size:.46em">
-            <li><code>sbt yama-cli/assembly</code>: a fat jar with a sh + cmd launcher in front of the zip, released
-                as <code>yama</code>. <code>chmod +x yama &amp;&amp; ./yama</code>, or <code>java -jar yama</code>.</li>
-            <li>First run bootstraps <code>~/.yama/config.json</code> from the defaults bundled in the jar.</li>
-            <li>The files server comes from npm: <code>npx -y --package @ssledz/files-mcp@&lt;version&gt; files-mcp</code>,
-                pinned to the version built with that yama.</li>
-            <li>Built-in skills ship on the jar's classpath and are extracted to a temp dir.
-                <small>Lesson learned: <code>jdk.zipfs</code> can't read a zip with a launcher script in front;
-                    <code>java.util.zip.ZipFile</code> can.</small></li>
-            <li>Releases are manual: Actions → release. <code>main</code> → <code>vX.Y.Z</code>, <code>develop</code>
-                → a <code>-SNAPSHOT</code> pre-release.</li>
-        </ul>
-    </section>
-
-    <section>
-        <span class="backup-badge">backup</span>
-        <h2>Polylith rules, <span class="grad-text">enforced by sbt</span></h2>
-        <pre class="codebox code"><span class="kw">lazy val</span> tool     = component("tool").dependsOn(conversation)
-<span class="kw">lazy val</span> mcpTools = component("mcp-tools").dependsOn(mcpClient, tool)
-<span class="kw">lazy val</span> skills   = component("skills").dependsOn(tool)
-<span class="kw">lazy val</span> agent    = component("agent").dependsOn(conversation, chat, tool, log)
-<span class="kw">lazy val</span> subagent = component("subagent").dependsOn(agent, chat, tool, log)
-<span class="kw">lazy val</span> cli      = base("cli").dependsOn(components*)
-<span class="kw">lazy val</span> yamaCli  = artifactProject("yama-cli").dependsOn(cli)   <span class="dim">// no code</span></pre>
-        <ul class="clean" style="font-size:.44em">
-            <li>Components depend only on other components' <b>interfaces</b>; implementations are
-                <code>private[&lt;brick&gt;]</code>, so the compiler enforces it.</li>
-            <li><code>scripts/check-bricks.sh</code> greps for cross-brick <code>.internal</code> imports in CI.</li>
-            <li>No cycles: <code>dependsOn</code> makes the graph explicit. <code>mcp-client</code> has no yama
-                dependencies at all.</li>
-        </ul>
-    </section>
-
-    <section>
-        <span class="backup-badge">backup</span>
-        <h2>Skills: <span class="grad-text">discovery and trust</span></h2>
-        <ul class="clean" style="font-size:.44em">
-            <li>Discovery: <code>&lt;project&gt;/.yama/skills</code>, <code>&lt;project&gt;/.agents/skills</code>,
-                <code>~/.yama/skills</code>, <code>~/.agents/skills</code>, <code>skills.paths</code>, then built-in.
-                Project beats user beats built-in.</li>
-            <li>Trust gate: project skills inject instructions, so they load only with
-                <code>skills.trustProject = true</code>.</li>
-            <li><code>activate_skill(name)</code>: <code>name</code> is a JSON Schema <code>enum</code> of the
-                discovered skills, so the model can't make one up. Returns
-                <code>&lt;skill_content name="…"&gt;</code> with resources listed, not read.</li>
-            <li><code>read_skill_resource(name, path)</code>: read-only, confined to the skill's directory.</li>
-            <li>Lenient validation: rule violations are warnings (<code>/skills</code>), broken YAML skips the skill.</li>
-        </ul>
-    </section>
-
-    <section>
-        <span class="backup-badge">backup</span>
-        <h2>Subagent wiring: <span class="grad-text">config → Tool[F]</span></h2>
-        <pre class="codebox code"><span class="str">"subagents"</span>: {
-  <span class="str">"research_agent"</span>: {
-    <span class="str">"description"</span>:  "Researches a topic on the web and returns a sourced answer. ...",
-    <span class="str">"instructions"</span>: "You are a web research specialist. Use tavily_search ...",
-    <span class="str">"tools"</span>:        ["tavily_search", "tavily_extract"],
-    <span class="str">"maxRounds"</span>:    8
-  }
-}</pre>
-        <ul class="clean" style="font-size:.44em">
-            <li>The worker is built by the same <code>Agent.make</code>, with <code>log.nested(spec.name)</code>:
-                its rounds show up indented inside one round of the outer loop.</li>
-            <li>Tavily over streamable HTTP, API key as <code>Authorization: Bearer</code> from
-                <code>TAVILY_API_KEY</code>. No key: the server is skipped, not a startup error.</li>
-        </ul>
-    </section>
-
-    <section>
-        <span class="backup-badge">backup</span>
-        <h2>Testing an agent: <span class="grad-text">swap the interface</span></h2>
-        <ul class="clean" style="font-size:.46em">
-            <li><code>Chat[F]</code> is a trait, so <code>ScriptedChat</code> replays scripted replies and records
-                every request: the loop is <b>fully deterministic</b> in tests (<code>AgentSpec</code>,
-                <code>SubAgentToolSpec</code>).</li>
-            <li><code>chat-openai-compat</code>: golden-JSON tests for the wire format, no network.</li>
-            <li><code>McpClientSpec</code>: spawns the real <code>files-mcp</code>. <code>SupervisorSpec</code>:
-                kills it and checks the respawn.</li>
-            <li>munit + munit-cats-effect, 15 specs, CI on every push.</li>
-        </ul>
-    </section>
 </section>
 
     </div>
