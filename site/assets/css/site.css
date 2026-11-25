@@ -362,3 +362,5 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: .6rem 2rem; justify-content:
 
 .card .code pre { font-size: .78rem; }
 .code pre, .table-wrap { scrollbar-color: var(--border) transparent; scrollbar-width: thin; }
+
+.talk p.subtitle { font-size: 1.15rem; font-weight: 600; color: var(--text); margin: -.2rem 0 .8rem; }

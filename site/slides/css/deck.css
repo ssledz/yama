@@ -688,3 +688,5 @@ body.evo-title-slide .reveal .logo-eng { opacity: 1; }
 .reveal .slides section .fragment.dim-in { opacity: .25; visibility: inherit; }
 .reveal .slides section .fragment.dim-in.visible { opacity: 1; }
 .reveal .codebox { scrollbar-color: var(--border) transparent; scrollbar-width: thin; }
+
+.reveal h3.subtitle { font-size: .9em; font-weight: 600; color: var(--muted); margin: -.6rem 0 1.2rem; }

@@ -11,7 +11,7 @@ cost, every tool call with its arguments and result, and the nested loop of a wo
 on purpose. It exists to show what an agent *is*: **an LLM in a loop, with tools, where the model chooses
 the control flow.**
 
-It is the companion code of the talk *The Art of the Agentic Loop* at Art of Scala 2026 (Warsaw, 3 December 2026).
+It is the companion code of the talk *Who Owns the Control Flow? Building LLM Agents in Scala 3* at Art of Scala 2026 (Warsaw, 3 December 2026).
 
 Home page: **https://ssledz.github.io/yama/**, slides: **https://ssledz.github.io/yama/slides/**.
 
