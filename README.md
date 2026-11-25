@@ -13,6 +13,8 @@ the control flow.**
 
 It is the companion code of the talk *The Art of the Agentic Loop* at Art of Scala 2026 (Warsaw, 3 December 2026).
 
+Home page: **https://ssledz.github.io/yama/**, slides: **https://ssledz.github.io/yama/slides/**.
+
 ## Quick start
 
 Requirements: JDK 21+, sbt, Node 20+ (for the files MCP server).
@@ -235,6 +237,21 @@ By hand: Actions → **release** → *Run workflow*, picking the branch.
 | `develop` | a pre-release `vX.Y.Z-SNAPSHOT` of the current commit; each run replaces the previous one |
 
 The version is baked into the jar: `yama --version`, and the banner shows it.
+
+## Home page and slides
+
+`site/` is the GitHub Pages site: the home page (`site/index.html`) and the talk deck (`site/slides/`, plain
+reveal.js 6 vendored under `site/slides/vendor/`, no build step). Run it locally:
+
+```bash
+scripts/serve-site.sh            # http://localhost:8000/ and http://localhost:8000/slides/
+scripts/serve-site.sh 9000 --open
+```
+
+In the deck: `s` opens the speaker notes, `f` fullscreen, `Esc` the overview, `↓` the deep-dive sub-slides.
+
+`.github/workflows/pages.yml` publishes `site/` on every push to `main` that touches it (or by hand: Actions →
+**pages** → *Run workflow*). One-time setup: Settings → Pages → Source: **GitHub Actions**.
 
 ## Credits
 

@@ -1,0 +1,690 @@
+/* Ported from the Evolution Engineering deck theme (evo-deck.css), plus yama-specific bits at the bottom. */
+
+:root {
+    --ink: #000000;
+    --bg: #000000;
+    --surface: #160c29;
+    --surface-2: #20143a;
+    --border: #2e1c50;
+    --border-soft: #221533;
+    --text: #ffffff;
+    --muted: #b3abc9;
+    --faint: #968dae;
+    --evo-purple: #291749;
+    --amethyst: #7442c8;
+    --amethyst-lt: #ab84e8;
+    --cyan: #5ae1ff;
+    --accent2: #e6fd75;
+    --grad: linear-gradient(115deg, #7442c8 0%, #8f57e6 42%, #5ae1ff 100%);
+    --grad-soft: linear-gradient(115deg, rgba(116, 66, 200, .20), rgba(90, 225, 255, .10));
+    --font: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --pad: clamp(2.2rem, 5.5vw, 6rem);
+}
+
+/* ---------- canvas ---------- */
+
+html,
+body {
+    background: var(--ink);
+}
+
+.reveal-viewport {
+    background:
+        radial-gradient(1000px 620px at 85% -12%, rgba(116, 66, 200, .16), transparent 60%),
+        radial-gradient(760px 520px at 3% 114%, rgba(90, 225, 255, .05), transparent 55%),
+        var(--bg);
+}
+
+.reveal {
+    font-family: var(--font);
+    color: var(--text);
+    font-weight: 400;
+}
+
+.reveal .slides {
+    text-align: left;
+}
+
+.reveal .slides section {
+    padding: 0;
+}
+
+/* ---------- type ---------- */
+
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4 {
+    font-family: var(--font);
+    color: var(--text);
+    text-transform: none;
+    text-shadow: none;
+    text-wrap: balance;
+}
+
+.reveal h1 {
+    font-size: 2.6em;
+    line-height: 1.0;
+    letter-spacing: -.028em;
+    font-weight: 800;
+    margin: 0 0 1.5rem;
+}
+
+.reveal h2 {
+    font-size: 1.7em;
+    line-height: 1.07;
+    letter-spacing: -.02em;
+    font-weight: 700;
+    margin: 0 0 1.4rem;
+}
+
+.reveal h3 {
+    font-size: 1.15em;
+    letter-spacing: -.01em;
+    font-weight: 600;
+}
+
+.reveal a {
+    color: var(--accent2);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(230, 253, 117, .35);
+}
+
+.reveal a:hover {
+    color: var(--accent2);
+    border-bottom-color: var(--accent2);
+}
+
+.reveal code,
+.reveal .chip {
+    font-family: var(--mono);
+    font-size: .8em;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--amethyst-lt);
+    padding: .14em .5em;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.reveal pre code {
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 1.1rem 1.25rem;
+}
+
+/* ---------- brand text bits ---------- */
+
+.grad-text {
+    background: var(--grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.reveal .kicker {
+    font-size: .38em;
+    font-weight: 600;
+    letter-spacing: .24em;
+    text-transform: uppercase;
+    color: var(--amethyst-lt);
+    margin: 0 0 1.6rem;
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+}
+
+.reveal .kicker::before {
+    content: "";
+    width: 38px;
+    height: 2px;
+    background: var(--grad);
+    display: inline-block;
+    border-radius: 2px;
+    flex: none;
+}
+
+.reveal p.lead {
+    font-size: .62em;
+    line-height: 1.52;
+    color: var(--muted);
+    margin: 0 0 1rem;
+    max-width: 48ch;
+    font-weight: 400;
+}
+
+.reveal .meta-line {
+    margin-top: 2.6rem;
+    font-size: .42em;
+    color: var(--faint);
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.5rem;
+}
+
+.reveal .meta-line b {
+    color: var(--amethyst-lt);
+    font-weight: 600;
+}
+
+.reveal .meta-line .name {
+    color: var(--accent2);
+    font-weight: 600;
+}
+
+/* ---------- lists ---------- */
+
+.reveal ul.clean {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.reveal ul.clean > li {
+    position: relative;
+    padding-left: 2rem;
+    margin: 0 0 .85rem;
+    line-height: 1.45;
+    color: #efedf5;
+}
+
+.reveal ul.clean > li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: .5em;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--grad);
+}
+
+.reveal ul.clean > li small {
+    display: block;
+    font-size: .8em;
+    color: var(--faint);
+    margin-top: .3rem;
+    line-height: 1.4;
+}
+
+/* ---------- cards, tables, flow diagrams ---------- */
+
+.reveal .grid {
+    display: grid;
+    gap: 1.1rem;
+    margin-top: .6rem;
+}
+
+.reveal .grid.c2 { grid-template-columns: repeat(2, 1fr); }
+.reveal .grid.c3 { grid-template-columns: repeat(3, 1fr); }
+
+.reveal .card {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-top-color: var(--border);
+    border-radius: 16px;
+    padding: 1.2rem 1.25rem;
+}
+
+.reveal .card .tag {
+    font-size: .32em;
+    font-weight: 600;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    display: block;
+    margin-bottom: .6rem;
+}
+
+.reveal .card h3 {
+    margin: 0 0 .45rem;
+    font-size: .58em;
+}
+
+.reveal .card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: .46em;
+    line-height: 1.45;
+}
+
+.reveal .card p + p { margin-top: .5rem; }
+
+/* headings and captions for a bare grid column, no card around them */
+.reveal .grid h3 { font-size: .56em; margin: 0 0 .3rem; }
+.reveal .grid p.sub { font-size: .38em; line-height: 1.4; color: var(--faint); margin: 0; }
+
+.reveal .card p b { color: var(--text); font-weight: 600; }
+
+.reveal .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .55rem;
+    margin-top: .8rem;
+    font-size: .42em; /* chips size off the slide's heading scale otherwise */
+}
+
+.reveal .chips .chip { color: #e2ddef; }
+
+.reveal table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: .6rem 0 0;
+    font-size: .42em;
+}
+
+.reveal table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-size: .8em;
+    color: var(--amethyst-lt);
+    border-bottom: 1px solid var(--border);
+    padding: .5rem .7rem;
+    text-align: left;
+}
+
+.reveal table td {
+    border-bottom: 1px solid var(--border-soft);
+    padding: .45rem .7rem;
+    color: #efedf5;
+    line-height: 1.35;
+}
+
+.reveal table td.num,
+.reveal table th.num {
+    text-align: right;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.reveal table tr.total td {
+    color: var(--text);
+    font-weight: 600;
+    border-bottom: none;
+}
+
+/* a two-column table shouldn't strand its numbers at the far edge */
+.reveal table.narrow { max-width: 34rem; }
+
+/* for the tables long enough to crowd a slide */
+.reveal table.compact td { padding: .28rem .7rem; }
+.reveal table.compact th { padding: .35rem .7rem; }
+
+.reveal table tr.sub td {
+    color: var(--faint);
+    font-style: italic;
+}
+
+/* diagrams exported light - they need their own panel on a dark slide */
+
+.reveal .figure {
+    display: inline-block;
+    background: #fff;
+    border-radius: 14px;
+    padding: .7rem;
+    margin: .6rem 0 0;
+    line-height: 0;
+}
+
+.reveal .figure img {
+    display: block;
+    max-width: 100%;
+    max-height: 340px; /* reveal's 1024x700 coordinate space, so this is ~half the canvas */
+    height: auto;
+    border-radius: 8px;
+}
+
+/* the diagram alone on a slide, as large as the canvas allows */
+.reveal .figure-full {
+    display: block;
+    width: 100%;
+    padding: .5rem;
+}
+
+.reveal .figure-full img { max-height: 640px; width: 100%; }
+
+/* fixed-width block for formulas and small diagrams */
+
+.reveal .codebox {
+    width: auto;           /* reveal's own pre rules would otherwise cap and shadow it */
+    box-shadow: none;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-top-color: var(--border);
+    border-radius: 14px;
+    padding: 1rem 1.2rem;
+    margin: .9rem 0 0;
+    font-family: var(--mono);
+    font-size: .36em;
+    line-height: 1.45; /* tight enough that box-drawing brackets join up */
+    color: var(--muted);
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.reveal .codebox b { color: var(--text); font-weight: 600; }
+.reveal .codebox .hl { color: var(--cyan); }
+.reveal .codebox .dim { color: var(--faint); }
+
+/* single-step flow: prompt -> model -> sample -> append */
+
+.reveal .loop {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: .6rem .9rem;
+    margin: 1rem 0 .4rem;
+}
+
+.reveal .node {
+    padding: .6rem 1rem;
+    border-radius: 13px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: .42em;
+    font-weight: 600;
+    text-align: center;
+    min-width: 92px;
+}
+
+.reveal .node.goal { border-color: rgba(171, 132, 232, .55); background: rgba(116, 66, 200, .16); }
+.reveal .node.done { border-color: rgba(90, 225, 255, .5); background: rgba(90, 225, 255, .10); }
+.reveal .node small { display: block; font-weight: 400; color: var(--faint); font-size: .72em; margin-top: .2rem; }
+.reveal .arrow { color: var(--amethyst-lt); font-size: .7em; line-height: 1; }
+
+.reveal .loop-band {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem 1.1rem;
+    border: 1px dashed var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: .38em;
+}
+
+/* "there is more below" cue on a slide that opens a vertical stack */
+.reveal .go-deeper {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    margin-top: 1.2rem;
+    font-family: var(--mono);
+    font-size: .36em;
+    letter-spacing: .08em;
+    color: var(--accent2);
+}
+
+.reveal .go-deeper .key {
+    border: 1px solid rgba(230, 253, 117, .45);
+    border-radius: 6px;
+    padding: .1em .45em;
+    line-height: 1;
+}
+
+.reveal .note {
+    margin-top: 1rem;
+    max-width: 74ch;
+    font-family: var(--mono);
+    font-size: .36em;
+    letter-spacing: .04em;
+    color: var(--faint);
+}
+
+.reveal .note b { color: var(--muted); font-weight: 600; }
+
+/* ---------- title-slide chrome ---------- */
+
+.reveal .logo-eng {
+    position: fixed;
+    top: clamp(1.2rem, 3.4vw, 2.4rem);
+    left: clamp(1.4rem, 4vw, 3rem);
+    width: clamp(120px, 12vw, 180px);
+    z-index: 20;
+    pointer-events: none;
+}
+
+.reveal .logo-eng svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* only the title slide leaves the top-left corner free for it */
+.reveal .logo-eng { opacity: 0; transition: opacity .3s ease; }
+body.evo-title-slide .reveal .logo-eng { opacity: 1; }
+
+.deck-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 clamp(1.1rem, 3vw, 2.4rem);
+    font-family: var(--font);
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    font-weight: 600;
+    color: var(--muted);
+    z-index: 20;
+    pointer-events: none;
+}
+
+.deck-footer b {
+    color: var(--text);
+    font-weight: 700;
+}
+
+/* hex / circuit network behind the title slide */
+.hexbg {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.hexbg .drift-a {
+    animation: hexDrift 18s ease-in-out infinite alternate;
+    will-change: transform;
+}
+
+.hexbg .drift-b {
+    animation: hexDrift 26s ease-in-out infinite alternate-reverse;
+    will-change: transform;
+}
+
+@keyframes hexDrift {
+    from { transform: translateY(0); }
+    to { transform: translateY(-14px); }
+}
+
+.hexbg .sig {
+    stroke-dasharray: 80 900;
+    animation: sigFlow 9s linear infinite;
+}
+
+.hexbg .sig.slow {
+    animation-duration: 14s;
+    animation-delay: 3s;
+}
+
+@keyframes sigFlow {
+    from { stroke-dashoffset: 980; }
+    to { stroke-dashoffset: 0; }
+}
+
+.hexbg .pulse {
+    animation: nodePulse 3.2s ease-in-out infinite;
+}
+
+@keyframes nodePulse {
+    0%, 100% { fill-opacity: 1; }
+    50% { fill-opacity: .35; }
+}
+
+.hexbg .ring {
+    opacity: 0;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ringPulse 3.2s ease-out infinite;
+}
+
+@keyframes ringPulse {
+    0% { transform: scale(.35); opacity: .7; }
+    70% { transform: scale(1.2); opacity: 0; }
+    100% { transform: scale(1.2); opacity: 0; }
+}
+
+/* section-divider slides: big translucent part number + circle motif */
+
+.reveal .part-no {
+    font-size: 4.4em;
+    line-height: 1;
+    padding-top: .08em;
+    font-weight: 800;
+    background: var(--grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    opacity: .42;
+    letter-spacing: -.04em;
+    margin-bottom: -.22em;
+}
+
+.evo-motif {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: .9;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ---------- reveal chrome ---------- */
+
+.reveal .progress {
+    color: var(--amethyst-lt);
+    height: 3px;
+}
+
+.reveal .controls {
+    color: var(--amethyst-lt);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hexbg .drift-a,
+    .hexbg .drift-b,
+    .hexbg .pulse,
+    .hexbg .ring { animation: none; }
+    .hexbg .sig { display: none; }
+}
+
+/* ============================================================
+   yama additions
+   ============================================================ */
+
+/* code slides: a touch larger than the formula boxes, readable on a stream */
+.reveal .codebox.code { font-size: .4em; line-height: 1.5; }
+.reveal .codebox.small { font-size: .32em; }
+.reveal .codebox .kw { color: var(--amethyst-lt); }
+.reveal .codebox .str { color: var(--accent2); }
+.reveal .codebox .prompt { color: var(--accent2); font-weight: 600; }
+.reveal .codebox .ok { color: #7ee2a8; }
+
+/* terminal window chrome */
+.reveal .term { padding-top: 2.1rem; position: relative; }
+.reveal .term::before {
+    content: "";
+    position: absolute;
+    top: .8rem;
+    left: 1rem;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ff5f57;
+    box-shadow: 16px 0 0 #febc2e, 32px 0 0 #28c840;
+}
+
+/* two code boxes or a code box next to bullets */
+.reveal .split { display: grid; grid-template-columns: 1.25fr 1fr; gap: 1.2rem; align-items: start; }
+.reveal .split.even { grid-template-columns: 1fr 1fr; }
+.reveal .split .codebox { margin-top: 0; }
+
+/* QR in the corner of the title and wrap-up slides */
+.reveal .qr {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 150px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: .26em;
+    color: var(--faint);
+}
+.reveal .qr .qr-code {
+    background: #fff;
+    border-radius: 12px;
+    padding: 8px;
+    line-height: 0;
+    margin-bottom: .4rem;
+}
+.reveal .qr .qr-code svg { width: 100%; height: auto; display: block; }
+.reveal .qr .qr-code:empty { display: none; }
+.reveal .qr.big { position: static; width: 210px; }
+
+/* the question to the room */
+.reveal .ask {
+    margin-top: 1.1rem;
+    font-size: .6em;
+    font-weight: 600;
+}
+
+/* wrap-up takeaways: numbered */
+.reveal ol.takeaways { list-style: none; counter-reset: t; padding: 0; margin: 0; }
+.reveal ol.takeaways > li {
+    counter-increment: t;
+    position: relative;
+    padding-left: 3rem;
+    margin: 0 0 1rem;
+    font-size: .58em;
+    line-height: 1.4;
+}
+.reveal ol.takeaways > li::before {
+    content: counter(t);
+    position: absolute;
+    left: 0;
+    top: -.15em;
+    font-size: 1.6em;
+    font-weight: 800;
+    background: var(--grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.reveal .backup-badge {
+    display: inline-block;
+    font-size: .3em;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    border: 1px solid rgba(230, 253, 117, .45);
+    border-radius: 6px;
+    padding: .15em .6em;
+    margin-bottom: .8rem;
+}
+
+.reveal .slides section .fragment.dim-in { opacity: .25; visibility: inherit; }
+.reveal .slides section .fragment.dim-in.visible { opacity: 1; }
+.reveal .codebox { scrollbar-color: var(--border) transparent; scrollbar-width: thin; }

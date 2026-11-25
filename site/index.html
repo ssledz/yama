@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>yama: Yet Another Micro Agent</title>
+    <meta name="description" content="A tiny, deliberately readable AI agent in Scala 3 and Cats Effect: an LLM in a loop, with native tools, MCP servers, Agent Skills and subagents.">
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="assets/css/site.css">
+</head>
+<body>
+
+<header class="topbar">
+    <div class="wrap">
+        <a class="brand" href="#top"><span class="grad-text">yama</span></a>
+        <nav>
+            <a class="opt" href="#features">Features</a>
+            <a href="#install">Install</a>
+            <a href="#config">Config</a>
+            <a class="opt" href="#repl">REPL</a>
+            <a href="slides/">Slides</a>
+            <a href="https://github.com/ssledz/yama">GitHub</a>
+        </nav>
+    </div>
+</header>
+
+<main id="top">
+
+<!-- ============================================================ hero -->
+<section class="hero">
+<svg class="hexbg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+<g class="drift-a">
+<path d="M 1933.0 52.0 L 1839.0 214.8 L 1651.0 214.8 L 1557.0 52.0 L 1651.0 -110.8 L 1839.0 -110.8 Z" fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="1.5"/>
+<path d="M 1700.0 360.0 L 1650.0 446.6 L 1550.0 446.6 L 1500.0 360.0 L 1550.0 273.4 L 1650.0 273.4 Z" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.5"/>
+<path d="M 1316.0 180.0 L 1283.0 237.2 L 1217.0 237.2 L 1184.0 180.0 L 1217.0 122.8 L 1283.0 122.8 Z" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="1.5"/>
+<path d="M 1424.0 60.0 L 1407.0 89.4 L 1373.0 89.4 L 1356.0 60.0 L 1373.0 30.6 L 1407.0 30.6 Z" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.5"/>
+<polyline points="620,140 1000,140 1080,60 1356,60" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1316,180 1457,180 1550,273.4" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1650,446.6 1650,560 1750,660" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1651,214.8 1651,300" fill="none" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1500,360 1408,360" fill="none" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="620" cy="140" r="5" fill="#ffffff" fill-opacity="0.30"/>
+<circle cx="1316" cy="180" r="5" fill="#ffffff" fill-opacity="0.30"/>
+<circle cx="1750" cy="660" r="5" fill="#ffffff" fill-opacity="0.30"/>
+<circle cx="1408" cy="360" r="5" fill="#ffffff" fill-opacity="0.30"/>
+<rect x="1076" y="56" width="8" height="8" fill="#ffffff" fill-opacity="0.22"/>
+<rect x="1647" y="296" width="8" height="8" fill="#ffffff" fill-opacity="0.22"/>
+<rect x="1646" y="556" width="8" height="8" fill="#ffffff" fill-opacity="0.22"/>
+<polyline class="sig slow" points="620,140 1000,140 1080,60 1356,60" fill="none" stroke="#5AE1FF" stroke-opacity="0.4" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="1380,470 1500,470 1580,550" fill="none" stroke="#5AE1FF" stroke-opacity="0.85" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+<circle class="ring" cx="1380" cy="470" r="16" fill="none" stroke="#5AE1FF" stroke-width="1.5"/>
+<circle class="pulse" cx="1380" cy="470" r="7" fill="#5AE1FF"/>
+</g>
+<g class="drift-b">
+<path d="M 210.0 1020.0 L 125.0 1167.2 L -45.0 1167.2 L -130.0 1020.0 L -45.0 872.8 L 125.0 872.8 Z" fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="1.5"/>
+<path d="M 376.0 940.0 L 353.0 979.8 L 307.0 979.8 L 284.0 940.0 L 307.0 900.2 L 353.0 900.2 Z" fill="none" stroke="#ffffff" stroke-opacity="0.15" stroke-width="1.5"/>
+<polyline points="376,940 560,940 640,860" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="210,1020 210,1080" fill="none" stroke="#ffffff" stroke-opacity="0.09" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="376" cy="940" r="5" fill="#ffffff" fill-opacity="0.30"/>
+<circle cx="640" cy="860" r="5" fill="#ffffff" fill-opacity="0.30"/>
+<polyline class="sig" points="376,940 560,940 640,860" fill="none" stroke="#ab84e8" stroke-opacity="0.5" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+</g>
+<g class="drift-a">
+<path d="M 1958.0 948.0 L 1900.0 1048.5 L 1784.0 1048.5 L 1726.0 948.0 L 1784.0 847.5 L 1900.0 847.5 Z" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.5"/>
+<polyline points="1520,1015 1660,1015 1726,948" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="1520" cy="1015" r="5" fill="#ffffff" fill-opacity="0.30"/>
+</g>
+</svg>
+    <div class="wrap">
+        <p class="kicker">Yet Another Micro Agent · Scala 3 · Cats Effect</p>
+        <h1>An AI agent you can<br><span class="grad-text">read in one sitting</span></h1>
+        <p class="lead">
+            yama is a tiny, deliberately readable agent in a REPL. It exists to show what an agent <b>is</b>:
+            an LLM in a loop, with tools, where <b>the model chooses the control flow</b>. Every round, model call,
+            token and tool call is logged, so you can watch it think.
+        </p>
+        <div class="actions">
+            <a class="btn primary" href="#install">Download &amp; run</a>
+            <a class="btn" href="slides/">The talk slides →</a>
+            <a class="btn" href="https://github.com/ssledz/yama">Source on GitHub</a>
+        </div>
+        <div class="loopline">
+            send the conversation <span class="hl">→</span> model answers with text? done
+            <span class="hl">→</span> asks for tools? run them, append, repeat
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ talk -->
+<section class="block" id="talk">
+    <div class="wrap">
+        <div class="talk">
+            <div>
+                <p class="kicker">Art of Scala 2026 · Warsaw · 3 December</p>
+                <h2>The Art of the <span class="grad-text">Agentic Loop</span></h2>
+                <p>Building AI agents from scratch in Scala 3: an LLM, a loop, native tools, an MCP server, skills,
+                    a subagent, and the guardrails that stop it from burning your budget. yama is the companion code.</p>
+            </div>
+            <a class="btn primary" href="slides/">Open the slides →</a>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ features -->
+<section class="block" id="features">
+    <div class="wrap">
+        <p class="kicker">Features</p>
+        <h2>Small on purpose, <span class="grad-text">complete anyway</span></h2>
+        <p class="section-lead">The loop itself is 45 lines. Everything below is plumbing around it, and each piece
+            is one small, swappable brick.</p>
+
+        <div class="grid c3">
+            <div class="card">
+                <span class="tag">the loop</span>
+                <h3>A visible agentic loop</h3>
+                <p>Send the conversation, run the tools the model asked for (in parallel, <code>parTraverse</code>),
+                    append the results, repeat. Stops on a final answer or after <code>maxRounds</code>.</p>
+            </div>
+            <div class="card">
+                <span class="tag">observability</span>
+                <h3>Verbose log of every round</h3>
+                <p>Each model call with its token cost, each tool call with arguments and result, and the nested loop
+                    of a worker agent, indented under its name.</p>
+            </div>
+            <div class="card">
+                <span class="tag">providers</span>
+                <h3>OpenAI, OpenRouter, DeepSeek, Ollama</h3>
+                <p>One component speaks the OpenAI <b>Responses API</b>, stateless. A provider is data in
+                    <code>config.json</code>; switch with <code>--provider</code>, no code change.</p>
+            </div>
+            <div class="card">
+                <span class="tag">native tool</span>
+                <h3><code>wget</code></h3>
+                <p>Downloads any URL into the workspace or session folder, with a sandbox check. Its JSON Schema is
+                    derived from a case class at compile time: <code>derives ToolSchema</code>.</p>
+            </div>
+            <div class="card">
+                <span class="tag">local MCP</span>
+                <h3>Sandboxed files server</h3>
+                <p><code>fs_read</code>, <code>fs_search</code>, <code>fs_write</code>, <code>fs_manage</code> from
+                    <a href="https://www.npmjs.com/package/@ssledz/files-mcp"><code>@ssledz/files-mcp</code></a>,
+                    spawned over stdio with the fs2 process API.</p>
+            </div>
+            <div class="card">
+                <span class="tag">remote MCP</span>
+                <h3>Streamable HTTP + Bearer auth</h3>
+                <p>Remote MCP servers such as Tavily web search, behind the same <code>McpClient[F]</code> as the local
+                    one. The model can't tell native, local or remote tools apart.</p>
+            </div>
+            <div class="card">
+                <span class="tag">resilience</span>
+                <h3>MCP supervisor</h3>
+                <p>A crashed local server is respawned and re-initialised with exponential backoff; calls made during
+                    the restart wait for it. Gives up after 5 quick crashes in a row.</p>
+            </div>
+            <div class="card">
+                <span class="tag">agent skills</span>
+                <h3>Skills, loaded on demand</h3>
+                <p>Implements the <a href="https://agentskills.io/specification">Agent Skills</a> format: catalog in
+                    the prompt, body via <code>activate_skill</code>, files via <code>read_skill_resource</code>.
+                    Built-in skills ship inside the jar.</p>
+            </div>
+            <div class="card">
+                <span class="tag">multi-agent</span>
+                <h3>Subagents as tools</h3>
+                <p>Orchestrator–worker: <code>research_agent</code> is a whole agent behind a tool, with its own
+                    prompt, tools, model and round budget, and a fresh conversation per call.</p>
+            </div>
+            <div class="card">
+                <span class="tag">guardrails</span>
+                <h3>Least privilege by construction</h3>
+                <p>The agent writes to exactly two mounts: the workspace and a per-run session folder. Tools are
+                    chosen per agent. Round budgets everywhere, and subagent depth is 1.</p>
+            </div>
+            <div class="card">
+                <span class="tag">reliability</span>
+                <h3>Retries outside the loop</h3>
+                <p>429 and 5xx are retried by <code>Chat.retrying</code> (cats-retry): exponential backoff, full
+                    jitter, capped, honouring <code>Retry-After</code>. Tool failures are data the model recovers from.</p>
+            </div>
+            <div class="card">
+                <span class="tag">distribution</span>
+                <h3>One executable file</h3>
+                <p>A fat jar with a launcher in front: <code>chmod +x yama &amp;&amp; ./yama</code>. First run writes
+                    its config to <code>~/.yama</code>. Version baked in: <code>yama --version</code>.</p>
+            </div>
+            <div class="card">
+                <span class="tag">code</span>
+                <h3>Tagless final, Cats Effect 3</h3>
+                <p>Every component is polymorphic in <code>F[_]</code>; <code>IO</code> appears in one file.
+                    http4s, circe, fs2, ciris, decline, log4cats, cats-retry, MCP Java SDK.</p>
+            </div>
+            <div class="card">
+                <span class="tag">architecture</span>
+                <h3>Polylith on sbt</h3>
+                <p>12 components, 1 base, 1 project. Bricks depend on interfaces only; implementations are
+                    <code>private[brick]</code> and a CI script guards the boundaries.</p>
+            </div>
+            <div class="card">
+                <span class="tag">tests</span>
+                <h3>Deterministic agent tests</h3>
+                <p><code>ScriptedChat</code> replays model replies, so the loop is fully testable. Golden-JSON wire
+                    tests, a real MCP integration test, supervisor tests. munit + CE.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ install -->
+<section class="block" id="install">
+    <div class="wrap">
+        <p class="kicker">Install</p>
+        <h2>Download, set a key, <span class="grad-text">run</span></h2>
+        <p class="section-lead">yama ships as one executable file from
+            <a href="https://github.com/ssledz/yama/releases">GitHub releases</a>. You need <b>JDK 21+</b> to run it,
+            <b>Node 20+</b> (for <code>npx</code>, which starts the files MCP server), and an API key for one LLM
+            provider.</p>
+
+        <ol class="steps">
+            <li>
+                <h3>Download the executable</h3>
+                <p>The latest release, made executable:</p>
+                <div class="code"><pre>curl -fLo yama https://github.com/ssledz/yama/releases/latest/download/yama
+chmod +x yama
+./yama --version</pre></div>
+                <p class="note">No stable release yet, or want the bleeding edge? Grab <code>yama</code> from the
+                    <b>vX.Y.Z-SNAPSHOT</b> pre-release on the <a href="https://github.com/ssledz/yama/releases">releases
+                    page</a>. It is also a plain jar: <code>java -jar yama</code> works on any OS.</p>
+            </li>
+            <li>
+                <h3>Put your API key in the environment</h3>
+                <p>Secrets come only from env vars, never from the config file. Only the selected provider's key is
+                    required (OpenAI by default):</p>
+                <div class="code"><pre><span class="kw">export</span> OPENAI_API_KEY=sk-...           <span class="dim"># default provider</span>
+<span class="kw">export</span> TAVILY_API_KEY=tvly-...         <span class="dim"># optional: enables research_agent (web search)</span></pre></div>
+                <p class="note">Keep them in a <code>.env</code> file? The JVM doesn't read it:
+                    <code>set -a; source .env; set +a</code>, or use direnv.</p>
+            </li>
+            <li>
+                <h3>Run it in the directory it should work in</h3>
+                <p>The directory you start yama in is its <b>workspace</b>: the only place (besides its session
+                    folder) it may write to.</p>
+                <div class="code"><pre>mkdir demo &amp;&amp; cd demo
+../yama
+
+<span class="str">yama&gt;</span> download https://example.com and save a short summary as example.md
+<span class="str">yama&gt;</span> research what Art of Scala 2026 is about and save a short summary as aos.md</pre></div>
+                <p class="note">The first run creates <b>~/.yama/config.json</b> from the defaults bundled in the jar.
+                    The second instruction needs <b>TAVILY_API_KEY</b>.</p>
+            </li>
+        </ol>
+
+        <h3 style="margin-top:2.4rem">Or build from source</h3>
+        <p class="note" style="margin-bottom:.4rem">Needs JDK 21+, sbt and Node 20+.</p>
+        <div class="code"><pre>git clone https://github.com/ssledz/yama &amp;&amp; cd yama
+npm install --prefix mcp/files-mcp        <span class="dim"># the local MCP server (TypeScript)</span>
+sbt "yama-cli/run --config config.json"   <span class="dim"># run against the repo's config</span>
+sbt yama-cli/assembly                     <span class="dim"># → projects/yama-cli/target/scala-3.*/yama.jar</span></pre></div>
+    </div>
+</section>
+
+<!-- ============================================================ config -->
+<section class="block" id="config">
+    <div class="wrap">
+        <p class="kicker">Configuration</p>
+        <h2>Where the config lives, <span class="grad-text">and how to change it</span></h2>
+        <p class="section-lead">Everything except secrets is in one JSON file. Secrets come only from env vars.
+            Command-line flags beat env vars, which beat the file.</p>
+
+        <div class="two-col">
+            <div>
+                <h3>yama's home directory</h3>
+                <p class="note" style="margin-bottom:.4rem">Resolved in this order:</p>
+                <div class="table-wrap"><table>
+                    <tr><th>#</th><th>source</th></tr>
+                    <tr><td>1</td><td><code>--config-dir &lt;dir&gt;</code></td></tr>
+                    <tr><td>2</td><td><code>$YAMA_CONFIG_DIR</code></td></tr>
+                    <tr><td>3</td><td><code>~/.yama</code> (default)</td></tr>
+                </table></div>
+                <div class="code"><pre>~/.yama/
+├── <b>config.json</b>        <span class="dim">read when --config is not given</span>
+├── skills/            <span class="dim">your user-level skills</span>
+└── sessions/
+    └── -Users-me-demo/  <span class="dim">one folder per workspace</span>
+        └── 20261124-093015-3fa9c2/  <span class="dim">one per run</span></pre></div>
+            </div>
+            <div>
+                <h3>The config file</h3>
+                <ul style="color:var(--muted);padding-left:1.2rem;margin:.4rem 0 1rem">
+                    <li><b style="color:var(--text)">First run:</b> <code>~/.yama/config.json</code> is created from the
+                        defaults bundled in the jar. With <code>npx</code> on the <code>PATH</code>, its files server runs
+                        the published <code>@ssledz/files-mcp</code>, pinned to the version built with this yama.</li>
+                    <li><b style="color:var(--text)">It is yours after that:</b> new releases never overwrite it.
+                        Delete it to get fresh defaults on the next run.</li>
+                    <li><b style="color:var(--text)">Another file:</b> <code>--config path/to/config.json</code>.
+                        A <code>--config</code> that doesn't exist is an error, never created. Relative paths inside
+                        a config file resolve against that file's directory.</li>
+                    <li><b style="color:var(--text)">Session folder:</b> created only when the agent first writes
+                        into it; a run that writes nothing leaves nothing behind.</li>
+                </ul>
+            </div>
+        </div>
+
+        <h3 style="margin-top:1.6rem">What's in <code>config.json</code></h3>
+        <div class="table-wrap"><table>
+            <tr><th>key</th><th>what it controls</th></tr>
+            <tr><td><code>chat</code></td><td>the selected <code>provider</code> and <code>model</code>, and the <code>retry</code> policy (<code>maxAttempts</code>, <code>baseDelayMs</code>, <code>maxDelayMs</code>)</td></tr>
+            <tr><td><code>providers</code></td><td>one profile per provider: <code>baseUrl</code>, <code>apiKeyEnv</code> (the <i>name</i> of the env var holding the key), extra <code>headers</code>, capability flags such as <code>strictTools</code></td></tr>
+            <tr><td><code>agent</code></td><td>the system prompt (<code>instructions</code>), <code>maxRounds</code>, and <code>mcpServers</code>: which servers' tools the orchestrator gets. Placeholders <code>{{MOUNT}}</code>, <code>{{SANDBOX_DIR}}</code>, <code>{{SESSION_MOUNT}}</code>, <code>{{SESSION_DIR}}</code> are substituted</td></tr>
+            <tr><td><code>sandbox</code></td><td><code>dir</code>: the workspace, if not the directory yama runs in</td></tr>
+            <tr><td><code>mcpServers</code></td><td>no <code>type</code>: a local process over stdio (<code>command</code>, <code>args</code>, <code>cwd</code>, <code>env</code>). <code>"type": "http"</code>: a remote server (<code>url</code>, <code>headers</code>, <code>apiKeyEnv</code> sent as <code>Authorization: Bearer</code>; skipped when the key is unset)</td></tr>
+            <tr><td><code>skills</code></td><td>extra skill <code>paths</code> and <code>trustProject</code> (load skills from the project's <code>.yama/skills</code> and <code>.agents/skills</code>)</td></tr>
+            <tr><td><code>subagents</code></td><td>worker agents exposed to the orchestrator as tools: <code>description</code>, <code>instructions</code>, <code>tools</code> (by name), optional <code>model</code>, <code>maxRounds</code></td></tr>
+        </table></div>
+
+        <h3 style="margin-top:1.6rem">Common changes</h3>
+        <div class="grid c2">
+            <div class="card">
+                <span class="tag">switch provider or model</span>
+                <p>For one run, use a flag or env var:</p>
+                <div class="code"><pre>./yama --provider openrouter --model openai/gpt-4.1
+YAMA_PROVIDER=ollama YAMA_MODEL=qwen3 ./yama</pre></div>
+                <p>For good, edit <code>chat</code> in <code>~/.yama/config.json</code>:</p>
+                <div class="code"><pre><span class="str">"chat"</span>: {
+  <span class="str">"provider"</span>: "openrouter",
+  <span class="str">"model"</span>: "openai/gpt-4.1"
+}</pre></div>
+            </div>
+            <div class="card">
+                <span class="tag">add a provider</span>
+                <p>Any service exposing <code>POST {baseUrl}/responses</code> works, no code needed:</p>
+                <div class="code"><pre><span class="str">"providers"</span>: {
+  <span class="str">"mine"</span>: { <span class="str">"baseUrl"</span>: "https://llm.example.com/v1",
+            <span class="str">"apiKeyEnv"</span>: "MY_LLM_KEY" }
+}</pre></div>
+                <p>Then <code>--provider mine</code> with <code>MY_LLM_KEY</code> exported.</p>
+            </div>
+            <div class="card">
+                <span class="tag">add an MCP server</span>
+                <p>Add it under <code>mcpServers</code>, then list its name in <code>agent.mcpServers</code> to give
+                    its tools to the agent:</p>
+                <div class="code"><pre><span class="str">"mcpServers"</span>: {
+  <span class="str">"git"</span>: { <span class="str">"command"</span>: "uvx",
+           <span class="str">"args"</span>: ["mcp-server-git"] }
+},
+<span class="str">"agent"</span>: { <span class="str">"mcpServers"</span>: ["files", "git"], ... }</pre></div>
+            </div>
+            <div class="card">
+                <span class="tag">add a skill</span>
+                <p>Drop a folder with a <code>SKILL.md</code> into <code>~/.yama/skills/</code> (or the project's
+                    <code>.yama/skills/</code>). It shows up in <code>/skills</code> on the next start.</p>
+                <div class="code"><pre>~/.yama/skills/commit-message/SKILL.md
+---
+name: commit-message
+description: How to write a commit message. Use when ...
+---
+# Instructions ...</pre></div>
+            </div>
+        </div>
+
+        <div class="two-col" style="margin-top:2rem">
+            <div>
+                <h3>Command-line flags</h3>
+                <div class="table-wrap"><table>
+                    <tr><th>flag</th><th>meaning</th></tr>
+                    <tr><td><code>--config-dir</code></td><td>yama's home (default <code>$YAMA_CONFIG_DIR</code>, else <code>~/.yama</code>)</td></tr>
+                    <tr><td><code>--config</code></td><td>config file (default <code>&lt;config-dir&gt;/config.json</code>)</td></tr>
+                    <tr><td><code>--provider</code></td><td>provider profile: <code>openai</code>, <code>openrouter</code>, <code>deepseek</code>, <code>ollama</code></td></tr>
+                    <tr><td><code>--model</code></td><td>model id, e.g. <code>gpt-4.1</code></td></tr>
+                    <tr><td><code>--sandbox</code></td><td>workspace directory (default: the current one)</td></tr>
+                    <tr><td><code>--max-rounds</code></td><td>round budget of the orchestrator</td></tr>
+                    <tr><td><code>--skills-path</code></td><td>extra skills directory (repeatable)</td></tr>
+                    <tr><td><code>--version</code>, <code>--help</code></td><td></td></tr>
+                </table></div>
+            </div>
+            <div>
+                <h3>Environment variables</h3>
+                <div class="table-wrap"><table>
+                    <tr><th>variable</th><th>meaning</th></tr>
+                    <tr><td><code>OPENAI_API_KEY</code></td><td>OpenAI key (default provider)</td></tr>
+                    <tr><td><code>OPENROUTER_API_KEY</code></td><td>OpenRouter key; pick a model with tool support</td></tr>
+                    <tr><td><code>DEEPSEEK_API_KEY</code></td><td>DeepSeek key</td></tr>
+                    <tr><td><code>OLLAMA_API_KEY</code></td><td>optional; Ollama ≥ 0.13.3 needs no key</td></tr>
+                    <tr><td><code>TAVILY_API_KEY</code></td><td>web search for <code>research_agent</code>; without it the worker is disabled</td></tr>
+                    <tr><td><code>YAMA_PROVIDER</code>, <code>YAMA_MODEL</code></td><td>override <code>chat.provider</code> / <code>chat.model</code></td></tr>
+                    <tr><td><code>YAMA_CONFIG_DIR</code></td><td>yama's home instead of <code>~/.yama</code></td></tr>
+                </table></div>
+            </div>
+        </div>
+        <p class="note">Precedence: <b>CLI flag &gt; env var &gt; config.json</b>. Config errors are reported all at
+            once, before the REPL starts. API keys are redacted wherever they would be printed.</p>
+    </div>
+</section>
+
+<!-- ============================================================ repl -->
+<section class="block" id="repl">
+    <div class="wrap">
+        <p class="kicker">Using it</p>
+        <h2>The <span class="grad-text">REPL</span></h2>
+        <p class="section-lead">Type an instruction in plain language, or a command. <code>/history</code> is the
+            interesting one: it is the raw conversation the model sees, which is all the memory an agent has.</p>
+        <div class="table-wrap"><table>
+            <tr><th>command</th><th>what it does</th></tr>
+            <tr><td><code>/help</code></td><td>list commands</td></tr>
+            <tr><td><code>/tools</code></td><td>the tools the agent can call, and where each lives (native, <code>mcp:files</code>, skill, agent)</td></tr>
+            <tr><td><code>/prompt</code></td><td>the system instructions after placeholder substitution, with the skills catalog</td></tr>
+            <tr><td><code>/history</code></td><td>the raw conversation, including tool calls and results</td></tr>
+            <tr><td><code>/stats</code></td><td>token usage so far, per agent</td></tr>
+            <tr><td><code>/skills</code></td><td>discovered skills and discovery diagnostics</td></tr>
+            <tr><td><code>/skill &lt;name&gt; &lt;instruction&gt;</code></td><td>run an instruction with a skill pre-loaded</td></tr>
+            <tr><td><code>/reset</code></td><td>forget the conversation, reset counters</td></tr>
+            <tr><td><code>/exit</code></td><td>quit (ctrl-d works too)</td></tr>
+        </table></div>
+    </div>
+</section>
+
+</main>
+
+<footer>
+    <div class="wrap">
+        <span><b class="grad-text">yama</b> · Yet Another Micro Agent · by Sławomir Śledź</span>
+        <span>files MCP server by <a href="https://x.com/_overment">overment</a> (MIT) ·
+            <a href="https://github.com/ssledz/yama">github.com/ssledz/yama</a></span>
+    </div>
+</footer>
+
+<script>
+    // copy buttons on code blocks
+    document.querySelectorAll('.code').forEach(function (box) {
+        var pre = box.querySelector('pre');
+        var btn = document.createElement('button');
+        btn.className = 'copy';
+        btn.type = 'button';
+        btn.textContent = 'Copy';
+        btn.addEventListener('click', function () {
+            var text = pre.innerText.split('\n').map(function (l) { return l.replace(/\s+#.*$/, ''); }).join('\n').trim();
+            try {
+                navigator.clipboard.writeText(text).then(function () {
+                    btn.textContent = 'Copied';
+                    setTimeout(function () { btn.textContent = 'Copy'; }, 1400);
+                });
+            } catch (e) { /* clipboard unavailable: nothing to do */ }
+        });
+        box.appendChild(btn);
+    });
+</script>
+</body>
+</html>
